@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DeniDental Pro - Gestión v9.2</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
+    
+    <!-- LIBRERÍAS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        body { background-color: #f8fafc; color: #334155; font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; -webkit-tap-highlight-color: transparent; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+        .input-field { width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #cbd5e1; outline: none; transition: all 0.2s; font-size: 16px; }
+        .input-field:focus { border-color: #7e22ce; ring: 2px; box-shadow: 0 0 0 3px rgba(126, 34, 206, 0.1); }
+        .input-field:disabled { background-color: #f1f5f9; cursor: not-allowed; color: #94a3b8; }
+        .btn { padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; }
+        .btn-primary { background-color: #7e22ce; color: white; }
+        .btn-primary:hover { background-color: #6b21a8; }
+        .btn-secondary { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .btn-secondary:hover { background-color: #e2e8f0; }
+        .btn-danger { background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+        .btn-danger:hover { background-color: #fecaca; }
+        .btn-success { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem; }
+        .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .bar-container { background: #f1f5f9; border-radius: 4px; overflow: hidden; height: 8px; }
+        .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        
+        /* Calendario Grid */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .calendar-day { aspect-ratio: 1; border-radius: 0.5rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; cursor: pointer; border: 1px solid transparent; font-size: 0.9rem; position: relative; padding-top: 4px; }
+        .calendar-day:hover { background-color: #f3f4f6; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+        
+        // --- 1. ICONOS SVG ---
+        const Icons = {
+            Activity: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+            Edit3: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>,
+            Save: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+            Printer: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>,
+            Trash2: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>,
+            UserCheck: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>,
+            Building: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/></svg>,
+            Stethoscope: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>,
+            DollarSign: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+            X: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Plus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            CheckCircle: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+            Download: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+            Upload: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
+            Mail: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>,
+            Calendar: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>,
+            ArrowLeft: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,
+            ArrowRight: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>,
+            Lock: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+            File: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+            Share: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+        };
+
+        const Icon = ({ name, size = 18, className = "", style = {} }) => {
+            const Component = Icons[name] || Icons.Activity;
+            return <Component width={size} height={size} className={className} style={style} />;
+        };
+
+        // --- 2. SERVICIOS ---
+        const safeNum = (val) => { const n = parseFloat(val); return isNaN(n) ? 0 : n; };
+
+        const compressImage = (base64Str, maxWidth = 300) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = base64Str;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width; let height = img.height;
+                    if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+                img.onerror = () => resolve(base64Str);
+            });
+        };
+
+        const DB = {
+            get: (key, fallback) => {
+                try {
+                    const data = localStorage.getItem(`deni_v9_${key}`);
+                    return data ? JSON.parse(data) : fallback;
+                } catch (e) { return fallback; }
+            },
+            set: (key, data) => {
+                try {
+                    localStorage.setItem(`deni_v9_${key}`, JSON.stringify(data));
+                } catch (e) { 
+                    if(e.name === 'QuotaExceededError') {
+                        alert("⚠️ MEMORIA LLENA: Descarga copia de seguridad.");
+                    }
+                }
+            },
+            uuid: () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
+        };
+
+        const PDFService = {
+            generate: (profile, invoice, logs) => {
+                if (!window.jspdf) return alert("Error: Librería PDF no cargada.");
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const colorDark = [30, 41, 59]; const colorLight = [100, 116, 139]; const colorAccent = [126, 34, 206];
+                const invDate = new Date(invoice.date);
+
+                if (profile.logo) {
+                    try {
+                        const imgProps = doc.getImageProperties(profile.logo);
+                        const maxWidth = 50; const maxHeight = 30;
+                        let w = imgProps.width; let h = imgProps.height;
+                        if (w > maxWidth) { h = (maxWidth * h) / w; w = maxWidth; }
+                        if (h > maxHeight) { w = (maxHeight * w) / h; h = maxHeight; }
+                        doc.addImage(profile.logo, imgProps.fileType, 15, 15, w, h);
+                    } catch (e) { }
+                } else {
+                    doc.setFontSize(22); doc.setTextColor(...colorAccent); doc.setFont(undefined, 'bold');
+                    doc.text("DeniDental", 15, 25);
+                }
+
+                doc.setFontSize(24); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
+                doc.text("FACTURA", 195, 25, { align: 'right' });
+                doc.setFontSize(10); doc.setTextColor(...colorLight); doc.setFont(undefined, 'normal');
+                doc.text(`Nº ${invoice.series}-${invoice.number.toString().padStart(4, '0')}`, 195, 32, { align: 'right' });
+                doc.text(`Fecha: ${invDate.toLocaleDateString()}`, 195, 37, { align: 'right' });
+
+                const yInfo = 60;
+                doc.setFontSize(9); doc.setTextColor(...colorLight); doc.text("EMISOR", 15, yInfo);
+                doc.setFontSize(10); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
+                const emisorName = doc.splitTextToSize(profile.fullName || 'Nombre Profesional', 85);
+                doc.text(emisorName, 15, yInfo + 5);
+                let currentYEmisor = yInfo + 5 + (emisorName.length * 5);
+                doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorLight);
+                doc.text(profile.dni || '', 15, currentYEmisor); currentYEmisor += 5;
+                const emisorAddr = doc.splitTextToSize(profile.address || '', 85);
+                doc.text(emisorAddr, 15, currentYEmisor); currentYEmisor += (emisorAddr.length * 5);
+                doc.text(profile.city || '', 15, currentYEmisor); currentYEmisor += 5;
+                doc.text(profile.phone || '', 15, currentYEmisor);
+
+                doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.text("FACTURAR A:", 110, yInfo);
+                doc.setFontSize(11); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
+                const clientName = doc.splitTextToSize(invoice.clinicName || 'Clínica', 85);
+                doc.text(clientName, 110, yInfo + 5);
+                let currentYClient = yInfo + 5 + (clientName.length * 5);
+                doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorLight);
+                doc.text(invoice.clinicCif || '', 110, currentYClient); currentYClient += 5;
+                const clientAddr = doc.splitTextToSize(invoice.clinicAddress || '', 85);
+                doc.text(clientAddr, 110, currentYClient); currentYClient += (clientAddr.length * 5);
+
+                const startTableY = Math.max(currentYEmisor, currentYClient) + 15;
+                const [year, month] = invoice.monthStr.split('-');
+                const monthName = new Date(year, month - 1).toLocaleString('es-ES', { month: 'long' });
+                
+                const daysWorked = invoice.daysText ? `Días trabajados: ${invoice.daysText}` : "";
+
+                const totalGross = safeNum(invoice.amount);
+                const irpfRate = safeNum(profile.irpf);
+                const irpfAmount = totalGross * (irpfRate / 100);
+                const totalNet = totalGross - irpfAmount;
+
+                doc.autoTable({
+                    startY: startTableY,
+                    head: [['CONCEPTO', 'IMPORTE']],
+                    body: [
+                        [`Servicios odontológicos - ${monthName} ${year}`, `${totalGross.toFixed(2)} €`],
+                        [`${daysWorked}`, '']
+                    ],
+                    theme: 'plain', 
+                    headStyles: { fillColor: [255, 255, 255], textColor: colorLight, fontSize: 9, fontStyle: 'bold', lineWidth: 0 },
+                    bodyStyles: { textColor: colorDark, fontSize: 10, cellPadding: 4 },
+                    columnStyles: { 0: { cellWidth: 140 }, 1: { halign: 'right', fontStyle: 'bold' } },
+                    didDrawPage: (d) => {
+                        doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.5);
+                        doc.line(15, startTableY - 1, 195, startTableY - 1);
+                        doc.line(15, d.cursor.y, 195, d.cursor.y);
+                    }
+                });
+
+                const finalY = doc.lastAutoTable.finalY + 15;
+                doc.setFontSize(10); doc.setTextColor(...colorLight);
+                doc.text("Base Imponible", 140, finalY, { align: 'right' });
+                doc.setTextColor(...colorDark); doc.text(`${totalGross.toFixed(2)} €`, 195, finalY, { align: 'right' });
+
+                doc.setFontSize(8); doc.setTextColor(...colorLight); doc.setFont(undefined, 'italic');
+                doc.text("* Servicios exentos de base imponible o IVA", 15, finalY + 5);
+
+                doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorDark);
+                doc.text(`Retenciones IRPF (${irpfRate}%)`, 140, finalY + 6, { align: 'right' });
+                doc.setTextColor(220, 38, 38); doc.text(`-${irpfAmount.toFixed(2)} €`, 195, finalY + 6, { align: 'right' });
+
+                doc.setDrawColor(226, 232, 240); doc.line(140, finalY + 10, 195, finalY + 10);
+
+                doc.setFontSize(14); doc.setTextColor(...colorAccent); doc.setFont(undefined, 'bold');
+                doc.text("TOTAL A PERCIBIR", 140, finalY + 18, { align: 'right' });
+                doc.text(`${totalNet.toFixed(2)} €`, 195, finalY + 18, { align: 'right' });
+
+                const footerY = 270;
+                doc.setFontSize(9); doc.setTextColor(...colorDark); doc.setFont(undefined, 'normal');
+                doc.text(`Vigo, a ${invDate.getDate()} de ${invDate.toLocaleString('es-ES', { month: 'long' })} de ${invDate.getFullYear()}`, 15, footerY);
+                doc.setFontSize(8); doc.setTextColor(...colorLight);
+                doc.text("Forma de pago:", 15, footerY + 6);
+                doc.setTextColor(...colorDark); doc.text(`Transferencia bancaria a IBAN: ${profile.iban || 'Pendiente configurar'}`, 15, footerY + 11);
+                
+                doc.save(`Factura_${invoice.series}${invoice.number}.pdf`);
+            }
+        };
+
+        // --- 3. COMPONENTES UI ---
+        const Input = ({ label, type = "text", ...props }) => (
+            <div className="mb-3 w-full">
+                {label && <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{label}</label>}
+                <input type={type} className="input-field" {...props} />
+            </div>
+        );
+        const TextArea = ({ label, rows = 3, ...props }) => (
+            <div className="mb-3 w-full">
+                {label && <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{label}</label>}
+                <textarea className="input-field resize-none" rows={rows} {...props}></textarea>
+            </div>
+        );
+        const Modal = ({ title, onClose, children }) => (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal-content" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center mb-4 border-b pb-2">
+                        <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+                        <button onClick={onClose}><Icon name="X" className="text-gray-400 hover:text-gray-600" /></button>
+                    </div>
+                    {children}
+                </div>
+            </div>
+        );
+
+        // --- 4. VISTAS ---
+        const LoginScreen = ({ onLogin }) => {
+            const [pass, setPass] = useState('');
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-purple-600 p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+                        <div className="mb-6 flex justify-center text-purple-600"><Icon name="Lock" size={48} /></div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Seguro</h2>
+                        <p className="text-gray-500 mb-6">Introduce tu código de acceso personal.</p>
+                        <input type="password" value={pass} onChange={e => setPass(e.target.value)} className="input-field text-center text-2xl tracking-widest mb-4" placeholder="•••••" maxLength={5} />
+                        <button onClick={() => pass === '36202' ? onLogin() : alert('Código incorrecto')} className="btn btn-primary w-full py-3">Entrar</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const RegisterView = ({ clinics, treatments, tariffs, addLog, updateTariffMaster }) => {
+             const activeClinics = clinics.filter(c => c.active !== false);
+            const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], clinicId: '', treatmentId: '', price: '', discount: '0', extra: '', obs: '' });
+
+            useEffect(() => {
+                if (form.clinicId && form.treatmentId) {
+                    const t = tariffs[`${form.clinicId}_${form.treatmentId}`];
+                    if (t) setForm(f => ({ ...f, price: t.price, discount: t.discount || '0' }));
+                }
+            }, [form.clinicId, form.treatmentId, tariffs]);
+
+            const save = () => {
+                if (!form.clinicId || !form.treatmentId || !form.price) return alert("Faltan datos.");
+                const clinic = clinics.find(c => c.id === form.clinicId);
+                const tName = treatments.find(t => t.id === form.treatmentId).name;
+                const base = safeNum(form.price);
+                const dto = safeNum(form.discount);
+                const extra = safeNum(form.extra);
+                const percentageToUse = clinic.paymentType === 'fixed' ? (safeNum(clinic.theoreticalPercentage)) : (safeNum(clinic.percentage));
+                const earned = (base * (1 - dto/100) * (percentageToUse/100)) + extra;
+                addLog({ ...form, earned, clinicName: clinic.name, treatmentName: tName });
+                updateTariffMaster(form.clinicId, form.treatmentId, form.price, form.discount);
+                setForm(prev => ({ ...prev, treatmentId: '', price: '', discount: '0', extra: '', obs: '' }));
+                alert("✅ Tratamiento guardado.");
+            };
+
+            return (
+                <div className="max-w-xl mx-auto space-y-6 fade-in pb-20">
+                    <div className="card p-6 border-t-4 border-t-purple-600">
+                        <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"><Icon name="Edit3" className="text-purple-600" /> Nuevo Tratamiento</h2>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input type="date" label="Fecha" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+                            <div className="mb-3">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Clínica</label>
+                                <select className="input-field" value={form.clinicId} onChange={e => setForm({...form, clinicId: e.target.value})}>
+                                    <option value="">Selecciona...</option>
+                                    {activeClinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tratamiento</label>
+                            <select className="input-field" value={form.treatmentId} onChange={e => setForm({...form, treatmentId: e.target.value})}>
+                                <option value="">Selecciona...</option>
+                                {treatments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            <Input type="number" label="Tarifa (€)" value={form.price} onChange={e => setForm({...form, price: e.target.value})} />
+                            <Input type="number" label="% Dto." value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} />
+                            <Input type="number" label="Extra (€)" value={form.extra} onChange={e => setForm({...form, extra: e.target.value})} />
+                        </div>
+                        <Input label="Notas" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})} />
+                        <button onClick={save} className="btn btn-primary w-full py-3 text-lg shadow-lg shadow-purple-200 mt-2"><Icon name="Save" /> Guardar Tratamiento</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const CalendarView = ({ schedule, setSchedule, clinics }) => {
+            const [date, setDate] = useState(new Date());
+            const [selectedDay, setSelectedDay] = useState(null);
+            const [dayForm, setDayForm] = useState({ clinicId: '', type: 'full', customWeight: '', startTime: '', endTime: '' });
+
+            const years = Array.from({length: 11}, (_, i) => new Date().getFullYear() - 5 + i);
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+            const getClinicColor = (index) => {
+                const colors = ['bg-blue-100 text-blue-700', 'bg-green-100 text-green-700', 'bg-purple-100 text-purple-700', 'bg-orange-100 text-orange-700', 'bg-pink-100 text-pink-700', 'bg-teal-100 text-teal-700'];
+                return colors[index % colors.length] || colors[0];
+            };
+
+            const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+            const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+
+            const handleMonthChange = (e) => { const newDate = new Date(date); newDate.setMonth(parseInt(e.target.value)); setDate(newDate); };
+            const handleYearChange = (e) => { const newDate = new Date(date); newDate.setFullYear(parseInt(e.target.value)); setDate(newDate); };
+            const handleDayClick = (day) => {
+                const dayStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                setSelectedDay(dayStr);
+                setDayForm({ clinicId: '', type: 'full', customWeight: '', startTime: '', endTime: '' });
+            };
+
+            const saveEntry = () => {
+                if(!dayForm.clinicId) return alert("Selecciona clínica");
+                let weight = 1;
+                if(dayForm.type === 'morning' || dayForm.type === 'afternoon') weight = 0.5;
+                if(dayForm.type === 'custom') weight = safeNum(dayForm.customWeight);
+                const newEntry = { ...dayForm, weight, date: selectedDay };
+                setSchedule([...schedule, newEntry]);
+                setDayForm({ clinicId: '', type: 'full', customWeight: '', startTime: '', endTime: '' });
+            };
+            const deleteEntry = (entryToDelete) => setSchedule(schedule.filter(s => s !== entryToDelete));
+            const currentDayEntries = selectedDay ? schedule.filter(s => s.date === selectedDay) : [];
+
+            return (
+                <div className="max-w-4xl mx-auto space-y-6 fade-in pb-20 p-4">
+                    <div className="flex justify-between items-center mb-4 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                        <button onClick={() => setDate(new Date(date.getFullYear(), date.getMonth()-1, 1))} className="p-2 text-gray-500 hover:text-purple-600"><Icon name="ArrowLeft" /></button>
+                        <div className="flex gap-2">
+                             <select value={date.getMonth()} onChange={handleMonthChange} className="bg-transparent font-bold text-gray-800 text-lg outline-none cursor-pointer hover:bg-gray-50 rounded px-1">{months.map((m, i) => <option key={i} value={i}>{m}</option>)}</select>
+                             <select value={date.getFullYear()} onChange={handleYearChange} className="bg-transparent font-bold text-gray-800 text-lg outline-none cursor-pointer hover:bg-gray-50 rounded px-1">{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
+                        </div>
+                        <button onClick={() => setDate(new Date(date.getFullYear(), date.getMonth()+1, 1))} className="p-2 text-gray-500 hover:text-purple-600"><Icon name="ArrowRight" /></button>
+                    </div>
+                    <div className="card p-4">
+                        <div className="grid grid-cols-7 gap-1 mb-2 text-center text-xs font-bold text-gray-400 uppercase"><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div></div>
+                        <div className="grid grid-cols-7 gap-1">
+                            {[...Array(startOffset)].map((_, i) => <div key={`empty-${i}`} className="min-h-[80px] bg-transparent"></div>)}
+                            {[...Array(daysInMonth)].map((_, i) => {
+                                const day = i + 1;
+                                const dayStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                                const dayEntries = schedule.filter(s => s.date === dayStr);
+                                return (
+                                    <div key={day} onClick={() => handleDayClick(day)} className="min-h-[80px] border border-gray-100 rounded-lg p-1 cursor-pointer hover:bg-gray-50 flex flex-col items-start relative bg-white">
+                                        <span className="text-gray-700 text-xs font-bold mb-1">{day}</span>
+                                        <div className="flex flex-col gap-1 w-full overflow-hidden">
+                                            {dayEntries.map((entry, idx) => {
+                                                const clinicIdx = clinics.findIndex(c => c.id === entry.clinicId);
+                                                const colorClass = getClinicColor(clinicIdx);
+                                                return (<div key={idx} className={`text-[9px] rounded px-1 py-0.5 truncate w-full ${colorClass}`}>{clinics.find(c => c.id === entry.clinicId)?.name} ({entry.weight})</div>)
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    {selectedDay && (
+                        <Modal title={`Agenda: ${new Date(selectedDay).toLocaleDateString()}`} onClose={() => setSelectedDay(null)}>
+                            <div className="space-y-4">
+                                <div className="space-y-2 mb-4">
+                                    {currentDayEntries.length > 0 ? currentDayEntries.map((entry, idx) => {
+                                        const clinic = clinics.find(c => c.id === entry.clinicId);
+                                        return (<div key={idx} className="flex justify-between items-center bg-gray-50 p-2 rounded text-sm"><span>{clinic?.name} - {entry.type === 'full' ? 'Día Completo' : entry.type} ({entry.weight})</span><button onClick={() => deleteEntry(entry)} className="text-red-400 hover:text-red-600"><Icon name="Trash2" size={14}/></button></div>)
+                                    }) : <p className="text-xs text-gray-400 italic">No hay turnos asignados.</p>}
+                                </div>
+                                <div className="border-t pt-4"><h4 className="text-sm font-bold text-gray-700 mb-2">Añadir Turno</h4><div className="mb-3"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Clínica</label><select className="input-field" value={dayForm.clinicId} onChange={e => setDayForm({...dayForm, clinicId: e.target.value})}><option value="">-- Libre --</option>{clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>{dayForm.clinicId && (<><div><label className="block text-xs font-bold text-gray-500 uppercase mb-2">Jornada</label><div className="grid grid-cols-2 gap-2"><button onClick={() => setDayForm({...dayForm, type: 'full'})} className={`btn text-xs ${dayForm.type === 'full' ? 'btn-primary' : 'btn-secondary'}`}>Día (1.0)</button><button onClick={() => setDayForm({...dayForm, type: 'morning'})} className={`btn text-xs ${dayForm.type === 'morning' ? 'btn-primary' : 'btn-secondary'}`}>Mañana (0.5)</button><button onClick={() => setDayForm({...dayForm, type: 'afternoon'})} className={`btn text-xs ${dayForm.type === 'afternoon' ? 'btn-primary' : 'btn-secondary'}`}>Tarde (0.5)</button><button onClick={() => setDayForm({...dayForm, type: 'custom'})} className={`btn text-xs ${dayForm.type === 'custom' ? 'btn-primary' : 'btn-secondary'}`}>Manual</button></div></div>{dayForm.type === 'custom' && (<Input type="number" label="Coeficiente (0.1 - 1.0)" value={dayForm.customWeight} onChange={e => setDayForm({...dayForm, customWeight: e.target.value})} placeholder="Ej: 0.75" />)}<div className="grid grid-cols-2 gap-2"><Input type="time" label="Inicio" value={dayForm.startTime} onChange={e => setDayForm({...dayForm, startTime: e.target.value})} /><Input type="time" label="Fin" value={dayForm.endTime} onChange={e => setDayForm({...dayForm, endTime: e.target.value})} /></div><button onClick={saveEntry} className="btn btn-primary w-full mt-2">Añadir a la Agenda</button></>)}</div>
+                            </div>
+                        </Modal>
+                    )}
+                </div>
+            );
+        };
+
+        const InvoiceFlowView = ({ logs, invoices, clinics, treatments, setLogs, setInvoices, profile, updateTariffMaster, schedule }) => {
+            const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+            const [filterClinicId, setFilterClinicId] = useState('');
+            const [editingLog, setEditingLog] = useState(null);
+            const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+            
+            const [showGenModal, setShowGenModal] = useState(false);
+            const [genData, setGenData] = useState({ amount: 0, daysText: '', daysCount: 0, dailyRate: 0 });
+
+            const logsForMonth = logs.filter(l => l.date.startsWith(month));
+            const unbilledLogs = logsForMonth.filter(l => !l.invoiceId && (filterClinicId ? l.clinicId === filterClinicId : true));
+            const billedInvoices = invoices.filter(inv => inv.monthStr === month && (filterClinicId ? inv.clinicId === filterClinicId : true));
+
+            const generateInvoiceEntity = () => {
+                if (!filterClinicId) return alert("Selecciona una clínica.");
+                const clinic = clinics.find(c => c.id === filterClinicId);
+                // SAFEGUARD 2: Clinic Check
+                if (!clinic) return alert("Error: Clínica no válida.");
+                if (!clinic.series) return alert("Falta configurar la Serie en la clínica.");
+
+                let totalAmount = 0;
+                let daysTxt = "";
+                let dCount = 0;
+                let dRate = 0;
+                
+                const uniqueDates = [...new Set(unbilledLogs.map(l => new Date(l.date).getDate()))].sort((a,b)=>a-b);
+                daysTxt = uniqueDates.length > 0 ? `${uniqueDates.join(", ")}` : "";
+
+                if (clinic.paymentType === 'fixed') {
+                    const sched = schedule.filter(s => s.clinicId === clinic.id && s.date.startsWith(month));
+                    if (sched.length > 0) {
+                        dCount = sched.reduce((acc, s) => acc + safeNum(s.weight), 0);
+                        const schedDays = [...new Set(sched.map(s => new Date(s.date).getDate()))].sort((a,b)=>a-b);
+                        daysTxt = schedDays.join(", ");
+                    } else {
+                        dCount = uniqueDates.length;
+                    }
+                    dRate = safeNum(clinic.dailyRate);
+                    totalAmount = dCount * dRate;
+                } else {
+                    totalAmount = unbilledLogs.reduce((sum, l) => sum + safeNum(l.earned), 0);
+                }
+
+                setGenData({ amount: totalAmount, daysText: daysTxt, daysCount: dCount, dailyRate: dRate });
+                setShowGenModal(true);
+            };
+
+            const confirmGenerate = () => {
+                const clinic = clinics.find(c => c.id === filterClinicId);
+                if (!clinic) return;
+
+                const lastNum = invoices.filter(inv => inv.series === clinic.series).reduce((max, inv) => Math.max(max, safeNum(inv.number)), 0);
+                const nextNum = lastNum + 1;
+                const newInvoiceId = DB.uuid();
+
+                const newInvoice = {
+                    id: newInvoiceId, series: clinic.series, number: nextNum, date: invoiceDate,
+                    monthStr: month, clinicId: clinic.id, clinicName: clinic.name, clinicCif: clinic.cif,
+                    clinicAddress: clinic.address, 
+                    amount: safeNum(genData.amount),
+                    daysText: genData.daysText, 
+                    logIds: unbilledLogs.map(l => l.id),
+                    isPaid: false
+                };
+
+                setInvoices([newInvoice, ...invoices]);
+                setLogs(logs.map(l => unbilledLogs.find(ul => ul.id === l.id) ? { ...l, invoiceId: newInvoiceId } : l));
+                setShowGenModal(false);
+                alert(`Factura ${clinic.series}-${nextNum} generada.`);
+            };
+
+            const deleteInvoice = (inv) => {
+                if (!confirm(`¿Eliminar factura ${inv.series}-${inv.number}?`)) return;
+                setLogs(logs.map(l => l.invoiceId === inv.id ? { ...l, invoiceId: null } : l));
+                setInvoices(invoices.filter(i => i.id !== inv.id));
+            };
+
+            const deleteLog = (id) => {
+                if(confirm("¿Eliminar este tratamiento definitivamente?")) {
+                    setLogs(logs.filter(l => l.id !== id));
+                }
+            };
+
+            const saveEditedLog = () => {
+                const clinic = clinics.find(c => c.id === editingLog.clinicId);
+                const tName = treatments.find(t => t.id === editingLog.treatmentId).name;
+                const base = safeNum(editingLog.price);
+                const dto = safeNum(editingLog.discount);
+                const extra = safeNum(editingLog.extra);
+                const percentageToUse = clinic.paymentType === 'fixed' ? (safeNum(clinic.theoreticalPercentage)) : (safeNum(clinic.percentage));
+                const earned = (base * (1 - dto/100) * (percentageToUse/100)) + extra;
+                setLogs(logs.map(l => l.id === editingLog.id ? { ...editingLog, earned, treatmentName: tName } : l));
+                updateTariffMaster(editingLog.clinicId, editingLog.treatmentId, editingLog.price, editingLog.discount);
+                setEditingLog(null);
+            };
+
+            const toggleInvoicePaid = (inv) => {
+                const updatedInvoice = { ...inv, isPaid: !inv.isPaid };
+                setInvoices(invoices.map(i => i.id === inv.id ? updatedInvoice : i));
+            };
+
+            const sendEmail = (inv) => {
+                const clinic = clinics.find(c => c.id === inv.clinicId);
+                if(!clinic || !clinic.email) return alert("Esta clínica no tiene email configurado.");
+                const template = profile.emailTemplate || "Hola,\n\nAdjunto factura {numero} de {mes}.\n\nSaludos,\n{emisor}";
+                const [y, m] = inv.monthStr.split('-');
+                const monthName = new Date(y, m - 1).toLocaleString('es-ES', { month: 'long' });
+                const subject = `Factura ${inv.series}-${inv.number}`;
+                const body = template.replace('{numero}', `${inv.series}-${inv.number}`).replace('{mes}', monthName).replace('{anio}', y).replace('{clinica}', clinic.name).replace('{emisor}', profile.fullName || 'Odontólogo');
+                window.location.href = `mailto:${clinic.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                alert("Abriendo correo... Recuerda adjuntar el PDF manualmente.");
+            };
+
+            return (
+                <div className="max-w-5xl mx-auto space-y-8 fade-in pb-20 p-4">
+                    <div className="card p-4 flex gap-4 items-center bg-white sticky top-2 z-10 shadow-md">
+                        <Input type="month" label="Periodo" value={month} onChange={e => setMonth(e.target.value)} />
+                        <div className="w-full">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Clínica</label>
+                            <select className="input-field" value={filterClinicId} onChange={e => setFilterClinicId(e.target.value)}>
+                                <option value="">-- Selecciona --</option>
+                                {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <div className="mb-4 flex justify-between items-center"><h3 className="font-bold text-gray-700">Pendiente ({unbilledLogs.length})</h3>{filterClinicId && <button onClick={generateInvoiceEntity} className="btn btn-primary text-sm py-1.5">Generar Factura</button>}</div>
+                            <div className="space-y-3">
+                                {unbilledLogs.map(log => (
+                                    <div key={log.id} className="card p-3 border-l-4 border-l-gray-300">
+                                        <div className="flex justify-between items-start">
+                                            <div><div className="font-bold text-sm">{log.treatmentName}</div><div className="text-xs text-gray-500">{new Date(log.date).toLocaleDateString()}</div><div className="text-xs font-mono mt-1 text-gray-600">{log.price}€ {log.discount > 0 && `(-${log.discount}%)`} {log.extra > 0 && `+${log.extra}`}</div></div>
+                                            <div className="text-right flex flex-col items-end gap-1"><div className="font-bold text-purple-700">{safeNum(log.earned).toFixed(2)}€</div><div className="flex gap-1"><button onClick={() => setEditingLog({...log})} className="text-gray-400 hover:text-purple-600 p-1"><Icon name="Edit3" size={16}/></button><button onClick={() => deleteLog(log.id)} className="text-gray-400 hover:text-red-500 p-1"><Icon name="Trash2" size={16}/></button></div></div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {unbilledLogs.length === 0 && <div className="text-center text-gray-400 text-sm py-4">No hay pendientes.</div>}
+                            </div>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-gray-700 mb-4">Facturas ({billedInvoices.length})</h3>
+                            <div className="space-y-3">
+                                {billedInvoices.map(inv => (
+                                    <div key={inv.id} className={`card p-4 border-l-4 ${inv.isPaid ? 'border-l-green-500 bg-green-50/20' : 'border-l-red-400 bg-red-50/10'}`}>
+                                        <div className="flex justify-between items-center mb-2"><span className="font-bold text-lg text-gray-800">#{inv.series}-{inv.number}</span><button onClick={() => toggleInvoicePaid(inv)} className={`text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 ${inv.isPaid ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}><Icon name="DollarSign" size={14}/> {inv.isPaid ? 'COBRADA' : 'PENDIENTE'}</button></div>
+                                        <div className="text-sm text-gray-600 mb-2">{inv.clinicName} - <strong>{safeNum(inv.amount).toFixed(2)}€</strong></div>
+                                        {inv.note && <div className="text-xs text-gray-500 italic mb-2">{inv.note}</div>}
+                                        <div className="text-xs text-gray-500 mb-2">Emisión: {new Date(inv.date).toLocaleDateString()}</div>
+                                        <div className="flex gap-2 mt-3 justify-between"><div className="flex gap-2"><button onClick={() => PDFService.generate(profile, inv, logs.filter(l => l.invoiceId === inv.id))} className="btn btn-secondary text-xs flex-1"><Icon name="Printer" size={14}/> PDF</button><button onClick={() => sendEmail(inv)} className="btn btn-secondary text-xs text-blue-600 border-blue-200 bg-blue-50"><Icon name="Mail" size={14}/></button></div><button onClick={() => deleteInvoice(inv)} className="btn btn-danger text-xs"><Icon name="Trash2" size={14}/></button></div>
+                                    </div>
+                                ))}
+                                {billedInvoices.length === 0 && <div className="text-center text-gray-400 text-sm py-4">No hay facturas.</div>}
+                            </div>
+                        </div>
+                    </div>
+                    {showGenModal && (
+                        <Modal title="Generar Factura" onClose={() => setShowGenModal(false)}>
+                            <div className="space-y-4">
+                                <Input type="date" label="Fecha Emisión" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
+                                {clinics.find(c => c.id === filterClinicId)?.paymentType === 'fixed' && (<div className="bg-blue-50 p-3 rounded border border-blue-100"><label className="block text-xs font-bold text-blue-700 uppercase mb-2">Cálculo Fijo</label><div className="grid grid-cols-2 gap-2"><Input label="Días" type="number" value={genData.daysCount} onChange={e => { const d = safeNum(e.target.value); setGenData({...genData, daysCount: d, amount: d * genData.dailyRate}); }} /><Input label="Precio/Día" type="number" value={genData.dailyRate} disabled /></div></div>)}
+                                <Input label="Importe Total (Editable)" type="number" value={genData.amount} onChange={e => setGenData({...genData, amount: e.target.value})} />
+                                <Input label="Texto Días (PDF)" value={genData.daysText} onChange={e => setGenData({...genData, daysText: e.target.value})} />
+                                <div className="flex justify-end gap-2 pt-2"><button onClick={() => setShowGenModal(false)} className="btn btn-secondary">Cancelar</button><button onClick={confirmGenerate} className="btn btn-primary">Confirmar y Generar</button></div>
+                            </div>
+                        </Modal>
+                    )}
+                    {editingLog && (
+                        <Modal title="Modificar Tratamiento" onClose={() => setEditingLog(null)}>
+                            <div className="space-y-4">
+                                <Input type="date" label="Fecha" value={editingLog.date} onChange={e => setEditingLog({...editingLog, date: e.target.value})} />
+                                <div className="mb-3"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tratamiento</label><select className="input-field" value={editingLog.treatmentId} onChange={e => setEditingLog({...editingLog, treatmentId: e.target.value})}>{treatments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+                                <div className="grid grid-cols-3 gap-2"><Input type="number" label="Precio" value={editingLog.price} onChange={e => setEditingLog({...editingLog, price: e.target.value})} /><Input type="number" label="% Dto" value={editingLog.discount} onChange={e => setEditingLog({...editingLog, discount: e.target.value})} /><Input type="number" label="Extra" value={editingLog.extra} onChange={e => setEditingLog({...editingLog, extra: e.target.value})} /></div>
+                                <Input label="Notas" value={editingLog.obs} onChange={e => setEditingLog({...editingLog, obs: e.target.value})} />
+                                <button onClick={saveEditedLog} className="btn btn-primary w-full">Guardar Cambios</button>
+                            </div>
+                        </Modal>
+                    )}
+                </div>
+            );
+        };
+
+        const ReportsView = ({ logs, clinics, invoices, schedule }) => {
+            const [reportType, setReportType] = useState('monthly'); 
+            const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+            const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+
+            const getFilteredData = () => {
+                if (reportType === 'monthly') {
+                    const fLogs = logs.filter(l => l.date.startsWith(selectedMonth));
+                    const fInvs = invoices.filter(i => i.monthStr === selectedMonth);
+                    return { fLogs, fInvs, title: `Informe Mensual (${selectedMonth})` };
+                } else {
+                    const fLogs = logs.filter(l => l.date.startsWith(selectedYear));
+                    const fInvs = invoices.filter(i => i.monthStr.startsWith(selectedYear));
+                    return { fLogs, fInvs, title: `Informe Anual (${selectedYear})` };
+                }
+            };
+
+            const { fLogs, fInvs, title } = getFilteredData();
+
+            const statsByClinic = clinics.map(c => {
+                let generated = 0;
+                const cLogs = fLogs.filter(l => l.clinicId === c.id);
+
+                if (c.paymentType === 'fixed') {
+                     // Check Agenda first for accurate days
+                     let cSched = [];
+                     if (reportType === 'monthly') cSched = schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedMonth));
+                     else cSched = schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedYear));
+                     
+                     if (cSched.length > 0) {
+                        generated = cSched.reduce((sum, s) => sum + (s.weight * (safeNum(c.dailyRate))), 0);
+                     } else {
+                        const uniqueDays = new Set(cLogs.map(l => l.date)).size;
+                        generated = uniqueDays * (safeNum(c.dailyRate));
+                     }
+                } else {
+                     generated = cLogs.reduce((sum, l) => sum + safeNum(l.earned), 0);
+                }
+                
+                const cInvs = fInvs.filter(i => i.clinicId === c.id);
+                const invoiced = cInvs.reduce((sum, i) => sum + safeNum(i.amount), 0);
+
+                return { 
+                    name: c.name, 
+                    type: c.paymentType === 'fixed' ? 'Fijo' : '%',
+                    generated: generated,
+                    invoiced: invoiced
+                };
+            });
+            
+            const treatmentCounts = {};
+            const treatmentAmount = {};
+            
+            fLogs.forEach(l => { 
+                treatmentCounts[l.treatmentName] = (treatmentCounts[l.treatmentName] || 0) + 1; 
+                treatmentAmount[l.treatmentName] = (treatmentAmount[l.treatmentName] || 0) + safeNum(l.earned);
+            });
+            
+            const topTreatments = Object.entries(treatmentCounts)
+                .sort((a,b) => b[1].count - a[1].count)
+                .slice(0, 5)
+                .map(([name, count]) => ({ name, count, amount: treatmentAmount[name] }));
+
+            // Totales Generales
+            const grandTotalGenerated = statsByClinic.reduce((acc, curr) => acc + curr.generated, 0);
+            const grandTotalInvoiced = statsByClinic.reduce((acc, curr) => acc + curr.invoiced, 0);
+            const grandTotalPending = grandTotalGenerated - grandTotalInvoiced;
+
+            return (
+                <div className="max-w-5xl mx-auto space-y-8 fade-in pb-20 p-4">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Icon name="Activity" className="text-purple-600"/> {title}</h2>
+                        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm"><button onClick={() => setReportType('monthly')} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${reportType === 'monthly' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Mensual</button><button onClick={() => setReportType('annual')} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${reportType === 'annual' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Anual</button></div>
+                        <div className="w-full md:w-auto">{reportType === 'monthly' ? (<Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} />) : (<select className="input-field w-32" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option></select>)}</div>
+                    </div>
+                    
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <div className="card p-4 border-l-4 border-purple-500">
+                            <div className="text-xs text-gray-500 uppercase font-bold mb-1">Total Generado</div>
+                            <div className="text-2xl font-bold text-gray-800">{grandTotalGenerated.toFixed(2)}€</div>
+                         </div>
+                         <div className="card p-4 border-l-4 border-green-500">
+                            <div className="text-xs text-gray-500 uppercase font-bold mb-1">Total Facturado</div>
+                            <div className="text-2xl font-bold text-gray-800">{grandTotalInvoiced.toFixed(2)}€</div>
+                         </div>
+                         <div className={`card p-4 border-l-4 ${grandTotalPending > 5 ? 'border-red-500' : 'border-gray-300'}`}>
+                            <div className="text-xs text-gray-500 uppercase font-bold mb-1">Pendiente</div>
+                            <div className={`text-2xl font-bold ${grandTotalPending > 5 ? 'text-red-600' : 'text-gray-400'}`}>{grandTotalPending.toFixed(2)}€</div>
+                         </div>
+                    </div>
+
+                    <div className="card p-6"><h3 className="font-bold text-lg mb-4 text-gray-700">Detalle por Clínica</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-xs"><tr><th className="p-3">Clínica</th><th className="p-3">Tipo</th><th className="p-3 text-right">Generado</th><th className="p-3 text-right">Facturado</th><th className="p-3 text-right">Pendiente</th></tr></thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {statsByClinic.map(stat => { const diff = stat.generated - stat.invoiced; return (<tr key={stat.name} className="hover:bg-gray-50"><td className="p-3 font-medium">{stat.name}</td><td className="p-3"><span className="text-xs bg-gray-100 px-2 py-1 rounded">{stat.type}</span></td><td className="p-3 text-right">{stat.generated.toFixed(2)}€</td><td className="p-3 text-right font-bold">{stat.invoiced.toFixed(2)}€</td><td className={`p-3 text-right font-bold ${diff > 1 ? 'text-red-500' : 'text-green-600'}`}>{diff.toFixed(2)}€</td></tr>) })}
+                                {/* Total Row */}
+                                <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
+                                    <td className="p-3" colSpan="2">TOTAL</td>
+                                    <td className="p-3 text-right">{grandTotalGenerated.toFixed(2)}€</td>
+                                    <td className="p-3 text-right">{grandTotalInvoiced.toFixed(2)}€</td>
+                                    <td className="p-3 text-right">{grandTotalPending.toFixed(2)}€</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div></div>
+                    
+                    <div className="card p-6"><h3 className="font-bold text-lg mb-4 text-gray-700">Top 5 Tratamientos (por Importe)</h3><div className="space-y-3">{topTreatments.map((t, idx) => (<div key={t.name} className="flex items-center gap-3"><span className="text-gray-400 font-mono w-4 font-bold">{idx + 1}.</span><div className="flex-1"><div className="flex justify-between text-sm mb-1"><span className="font-medium text-gray-700">{t.name}</span><div className="text-right"><span className="text-gray-900 font-bold block">{t.amount.toFixed(2)}€</span><span className="text-gray-500 text-xs">{t.count} uds.</span></div></div><div className="bar-container"><div className="bar-fill bg-purple-500" style={{ width: `${(t.amount / (topTreatments[0].amount || 1)) * 100}%` }}></div></div></div></div>))}</div></div>
+                </div>
+            );
+        };
+
+        const SettingsView = ({ profile, onSaveProfile, clinics, setClinics, treatments, setTreatments, tariffs, logs, setLogs, invoices, setInvoices }) => {
+            const [localProfile, setLocalProfile] = useState(profile);
+            const [clinicForm, setClinicForm] = useState({ id: null, name: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' });
+            const [newTreat, setNewTreat] = useState('');
+            const [viewHistory, setViewHistory] = useState(null);
+            
+            const fileInputRef = useRef(null);
+            const triggerFileSelect = () => fileInputRef.current.click();
+            const removeLogo = () => setLocalProfile({...localProfile, logo: null});
+
+            const handleLogoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    compressImage(URL.createObjectURL(file)).then(compressedBase64 => {
+                        setLocalProfile(prev => ({ ...prev, logo: compressedBase64 }));
+                    });
+                }
+            };
+
+            const saveClinic = () => {
+                if(!clinicForm.name) return;
+                const newC = { ...clinicForm };
+                if (newC.paymentType === 'fixed') newC.percentage = ''; 
+                
+                if (clinicForm.id) {
+                    setClinics(clinics.map(c => c.id === clinicForm.id ? newC : c));
+                } else {
+                    setClinics([...clinics, { ...newC, id: DB.uuid() }]);
+                }
+                setClinicForm({ id: null, name: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' });
+            };
+
+            const editClinic = (c) => {
+                setClinicForm({ paymentType: 'percent', dailyRate: '', theoreticalPercentage: '', email: '', ...c });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const addT = () => { if(!newTreat) return; setTreatments([...treatments, { id: DB.uuid(), name: newTreat }]); setNewTreat(''); };
+            
+            const handleDownloadBackup = () => {
+                const data = { profile, clinics, treatments, logs, tariffs, invoices };
+                const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Backup_DeniDental_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+            };
+
+            const handleRestoreBackup = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if(confirm("¿Seguro que quieres restaurar? Se sobrescribirán los datos actuales.")) {
+                            try {
+                                if(data.profile) { setLocalProfile(data.profile); onSaveProfile(data.profile); }
+                                if(data.clinics) setClinics(data.clinics);
+                                if(data.treatments) setTreatments(data.treatments);
+                                if(data.logs) setLogs(data.logs);
+                                if(data.tariffs) DB.set('tariffs', data.tariffs);
+                                if(data.invoices) setInvoices(data.invoices);
+                                alert("Copia restaurada con éxito.");
+                                window.location.reload();
+                            } catch (quotaError) {
+                                if(data.profile && data.profile.logo) {
+                                    if(confirm("Memoria llena. ¿Intentar restaurar SIN el logo para salvar los datos?")) {
+                                        const cleanProfile = {...data.profile, logo: null};
+                                        setLocalProfile(cleanProfile); 
+                                        onSaveProfile(cleanProfile);
+                                        if(data.clinics) setClinics(data.clinics);
+                                        if(data.treatments) setTreatments(data.treatments);
+                                        if(data.logs) setLogs(data.logs);
+                                        if(data.tariffs) DB.set('tariffs', data.tariffs);
+                                        if(data.invoices) setInvoices(data.invoices);
+                                        alert("Restaurado parcialmente (sin logo).");
+                                        window.location.reload();
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) { alert("Error al leer el archivo de copia."); }
+                };
+                reader.readAsText(file);
+            };
+            
+            const handleRestorePaste = () => {
+                const text = prompt("Pega aquí el código de la copia de seguridad:");
+                if (text) {
+                    try {
+                        const data = JSON.parse(text);
+                        if(confirm("¿Restaurar datos?")) {
+                            if(data.profile) { setLocalProfile(data.profile); onSaveProfile(data.profile); }
+                            if(data.clinics) setClinics(data.clinics);
+                            if(data.treatments) setTreatments(data.treatments);
+                            if(data.logs) setLogs(data.logs);
+                            if(data.tariffs) DB.set('tariffs', data.tariffs);
+                            if(data.invoices) setInvoices(data.invoices);
+                            alert("Restaurado.");
+                            window.location.reload();
+                        }
+                    } catch(e) { alert("Código inválido."); }
+                }
+            };
+            
+            const handleShareBackup = async () => {
+                const data = { profile, clinics, treatments, logs, tariffs, invoices };
+                const jsonStr = JSON.stringify(data);
+                
+                // Opción 1: Web Share API (Archivo)
+                try {
+                    const blob = new Blob([jsonStr], {type: 'application/json'});
+                    const file = new File([blob], `backup_${new Date().toISOString().slice(0,10)}.json`, { type: 'application/json' });
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: 'Backup DeniDental' });
+                        return;
+                    }
+                } catch(e) { console.log("Share file failed, trying text..."); }
+
+                // Opción 2: Web Share API (Texto) - Para WhatsApp a veces va mejor
+                try {
+                    await navigator.share({ title: 'Backup DeniDental', text: jsonStr });
+                } catch(e) {
+                    // Fallback: Copiar al portapapeles
+                    navigator.clipboard.writeText(jsonStr).then(() => alert("Copia copiada al portapapeles. Pégala en WhatsApp/Notas."));
+                }
+            };
+
+            const defaultEmailTemplate = "Hola {clinica},\n\nAdjunto le remito la factura {numero} correspondiente a los servicios prestados en {mes} {anio}.\n\nUn cordial saludo,\n\n{emisor}";
+
+            return (
+                <div className="max-w-4xl mx-auto space-y-8 fade-in pb-20 p-4">
+                    <div className="card p-6 border-l-4 border-blue-500 bg-blue-50/50">
+                        <h3 className="font-bold text-lg mb-4 text-blue-700 flex gap-2"><Icon name="Save"/> Gestión de Datos (Backup)</h3>
+                        <div className="flex flex-col gap-4">
+                             <div className="flex gap-2">
+                                <button onClick={handleShareBackup} className="btn btn-primary flex-1"><Icon name="Upload" size={18}/> Compartir Copia (WhatsApp)</button>
+                                <button onClick={handleDownloadBackup} className="btn btn-secondary"><Icon name="Download" size={18}/></button>
+                             </div>
+                             <div className="flex gap-2">
+                                 <label className="btn btn-secondary flex-1 cursor-pointer"><Icon name="Download" size={18}/> Cargar Archivo<input type="file" onChange={handleRestoreBackup} className="hidden" accept=".json" /></label>
+                                 <button onClick={handleRestorePaste} className="btn btn-secondary flex-1"><Icon name="Edit3" size={18}/> Pegar Código</button>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div className="card p-6">
+                        <h3 className="font-bold text-lg mb-4 text-purple-700 flex gap-2"><Icon name="UserCheck"/> Datos Fiscales</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input label="Nombre" value={localProfile.fullName || ''} onChange={e => setLocalProfile({...localProfile, fullName: e.target.value})} />
+                            <Input label="NIF" value={localProfile.dni || ''} onChange={e => setLocalProfile({...localProfile, dni: e.target.value})} />
+                            <Input label="Dirección" value={localProfile.address || ''} onChange={e => setLocalProfile({...localProfile, address: e.target.value})} />
+                            <div className="grid grid-cols-2 gap-2"><Input label="CP/Ciudad" value={localProfile.city || ''} onChange={e => setLocalProfile({...localProfile, city: e.target.value})} /><Input label="% IRPF" value={localProfile.irpf || ''} onChange={e => setLocalProfile({...localProfile, irpf: e.target.value})} /></div>
+                            <Input label="IBAN" value={localProfile.iban || ''} onChange={e => setLocalProfile({...localProfile, iban: e.target.value})} />
+                        </div>
+                        <div className="mt-6 flex flex-col md:flex-row gap-4 items-center justify-between border-t pt-4 border-gray-100">
+                            <div className="w-full md:w-auto flex flex-col items-center md:items-start gap-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Logo Corporativo</label>
+                                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" ref={fileInputRef} />
+                                {localProfile.logo ? (<div className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg"><img src={localProfile.logo} className="h-12 w-12 object-contain border rounded bg-white" /><div className="flex gap-2"><button onClick={triggerFileSelect} className="btn btn-secondary text-xs py-1.5">Cambiar</button><button onClick={removeLogo} className="btn btn-danger text-xs py-1.5"><Icon name="Trash2" size={14}/></button></div></div>) : (<button onClick={triggerFileSelect} className="btn btn-secondary text-xs w-full md:w-auto border-dashed border-2 text-gray-500"><Icon name="Plus" size={14}/> Añadir Logo</button>)}
+                            </div>
+                            <button onClick={() => onSaveProfile(localProfile)} className="btn btn-primary w-full md:w-auto py-3 md:py-2 shadow-lg md:shadow-none mt-2 md:mt-0"><Icon name="Save" size={18}/> Guardar Perfil</button>
+                        </div>
+                    </div>
+                    
+                    <div className="card p-6">
+                        <h3 className="font-bold text-lg mb-4 text-gray-700">Configuración de Email</h3>
+                        <p className="text-xs text-gray-500 mb-2">Variables: {'{numero}'}, {'{mes}'}, {'{anio}'}, {'{clinica}'}, {'{emisor}'}</p>
+                        <TextArea label="Plantilla de Correo" value={localProfile.emailTemplate || defaultEmailTemplate} onChange={e => setLocalProfile({...localProfile, emailTemplate: e.target.value})} rows={6} />
+                        <div className="mt-2 text-right"><button onClick={() => onSaveProfile(localProfile)} className="btn btn-primary text-sm">Guardar Plantilla</button></div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="card p-6">
+                            <h3 className="font-bold mb-4">{clinicForm.id ? 'Editar Clínica' : 'Nueva Clínica'}</h3>
+                            <div className="space-y-3 bg-gray-50 p-4 rounded mb-2">
+                                <Input placeholder="Nombre" value={clinicForm.name} onChange={e => setClinicForm({...clinicForm, name: e.target.value})} />
+                                <Input placeholder="Email" type="email" value={clinicForm.email} onChange={e => setClinicForm({...clinicForm, email: e.target.value})} />
+                                <div className="mb-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Modelo de Cobro</label>
+                                    <div className="flex gap-4 text-sm"><label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="payType" checked={clinicForm.paymentType === 'percent'} onChange={() => setClinicForm({...clinicForm, paymentType: 'percent'})} /> Porcentaje</label><label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="payType" checked={clinicForm.paymentType === 'fixed'} onChange={() => setClinicForm({...clinicForm, paymentType: 'fixed'})} /> Fijo Diario</label></div>
+                                </div>
+                                {clinicForm.paymentType === 'percent' ? (<Input label="Porcentaje Acordado (%)" placeholder="%" type="number" value={clinicForm.percentage} onChange={e => setClinicForm({...clinicForm, percentage: e.target.value})} />) : (<div className="grid grid-cols-2 gap-2"><Input label="Fijo Diario (€)" placeholder="€" type="number" value={clinicForm.dailyRate} onChange={e => setClinicForm({...clinicForm, dailyRate: e.target.value})} /><Input label="% Teórico" placeholder="%" type="number" value={clinicForm.theoreticalPercentage} onChange={e => setClinicForm({...clinicForm, theoreticalPercentage: e.target.value})} /></div>)}
+                                <div className="flex gap-2"><Input label="Serie Fac." placeholder="Ej: A" value={clinicForm.series} onChange={e => setClinicForm({...clinicForm, series: e.target.value})} /><Input label="CIF" placeholder="CIF" value={clinicForm.cif} onChange={e => setClinicForm({...clinicForm, cif: e.target.value})} /></div>
+                                <Input placeholder="Dirección" value={clinicForm.address} onChange={e => setClinicForm({...clinicForm, address: e.target.value})} />
+                                <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer"><input type="checkbox" checked={clinicForm.active !== false} onChange={e => setClinicForm({...clinicForm, active: e.target.checked})} /> Clínica Activa</label>
+                                <div className="flex gap-2 pt-2">{clinicForm.id && <button onClick={() => setClinicForm({ id: null, name: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' })} className="btn btn-secondary w-full text-sm">Cancelar</button>}<button onClick={saveClinic} className="btn btn-secondary w-full text-sm">{clinicForm.id ? 'Actualizar' : 'Añadir'}</button></div>
+                            </div>
+                            <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">{clinics.map(c => (<li key={c.id} className={`flex justify-between p-2 border-b ${c.active === false ? 'bg-gray-100 text-gray-400' : ''}`}><div className="flex flex-col"><span>{c.name} {c.active === false && '(Inactiva)'}</span><span className="text-xs text-gray-500">{c.paymentType === 'fixed' ? `Fijo: ${c.dailyRate}€/día` : `${c.percentage}%`} - Serie: {c.series}</span></div><button onClick={() => editClinic(c)} className="text-blue-500 hover:text-blue-700"><Icon name="Edit3" size={14}/></button></li>))}</ul>
+                        </div>
+                        <div className="card p-6">
+                            <h3 className="font-bold mb-4">Tratamientos</h3>
+                            <div className="flex gap-2 mb-2"><Input placeholder="Nuevo..." value={newTreat} onChange={e => setNewTreat(e.target.value)} /><button onClick={addT} className="btn btn-secondary">OK</button></div>
+                            <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">{treatments.map(t => <li key={t.id} className="flex justify-between p-2 border-b">{t.name}<button onClick={() => setTreatments(treatments.filter(x=>x.id!==t.id))} className="text-red-400"><Icon name="X" size={14}/></button></li>)}</ul>
+                        </div>
+                    </div>
+                    {viewHistory && (<Modal title="Histórico de Precios" onClose={() => setViewHistory(null)}><div className="space-y-2"><div className="bg-purple-50 p-3 rounded mb-4 text-center"><div className="text-xs text-gray-500 uppercase">Actual</div><div className="text-2xl font-bold text-purple-700">{viewHistory.price}€</div></div><h4 className="text-xs font-bold text-gray-500 uppercase">Cambios Anteriores</h4>{viewHistory.history && viewHistory.history.length > 0 ? (viewHistory.history.map((h, i) => (<div key={i} className="flex justify-between text-sm p-2 border-b"><span>{new Date(h.date).toLocaleDateString()}</span><span className="font-mono text-gray-600">{h.oldPrice}€ (Dto: {h.oldDiscount}%)</span></div>))) : <p className="text-gray-400 text-sm">No hay cambios registrados.</p>}</div></Modal>)}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 5. APP PRINCIPAL
+        // ==========================================
+        function App() {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [view, setView] = useState('register');
+            const [profile, setProfile] = useState(DB.get('profile', { irpf: '15' }));
+            const [clinics, setClinics] = useState(DB.get('clinics', []));
+            const [treatments, setTreatments] = useState(DB.get('treatments', []));
+            const [logs, setLogs] = useState(DB.get('logs', []));
+            const [tariffs, setTariffs] = useState(DB.get('tariffs', {}));
+            const [invoices, setInvoices] = useState(DB.get('invoices', []));
+            const [schedule, setSchedule] = useState(DB.get('schedule', []));
+
+            useEffect(() => DB.set('profile', profile), [profile]);
+            useEffect(() => DB.set('clinics', clinics), [clinics]);
+            useEffect(() => DB.set('treatments', treatments), [treatments]);
+            useEffect(() => DB.set('logs', logs), [logs]);
+            useEffect(() => DB.set('tariffs', tariffs), [tariffs]);
+            useEffect(() => DB.set('invoices', invoices), [invoices]);
+            useEffect(() => DB.set('schedule', schedule), [schedule]);
+
+            const updateTariffMaster = (clinicId, treatmentId, newPrice, newDiscount) => {
+                const key = `${clinicId}_${treatmentId}`;
+                const current = tariffs[key];
+                if (!current || parseFloat(current.price) !== parseFloat(newPrice) || parseFloat(current.discount) !== parseFloat(newDiscount)) {
+                    const historyEntry = current ? { date: new Date().toISOString(), oldPrice: current.price, oldDiscount: current.discount } : null;
+                    setTariffs(prev => ({ ...prev, [key]: { price: newPrice, discount: newDiscount, history: historyEntry ? [...(current.history || []), historyEntry] : [] } }));
+                }
+            };
+
+            const addLog = (logData) => {
+                const newLog = { ...logData, id: DB.uuid(), isPaid: false, invoiceId: null };
+                setLogs([newLog, ...logs]);
+            };
+
+            const handleSaveProfile = (newProfile) => {
+                setProfile(newProfile);
+                alert("Perfil guardado correctamente.");
+            };
+
+            if (!isAuthenticated) return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+
+            return (
+                <div className="min-h-screen pb-20">
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
+                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v9.2</span></div></div>
+                    </header>
+                    <div className="p-4 md:p-8">
+                        {view === 'register' && <RegisterView clinics={clinics} treatments={treatments} tariffs={tariffs} addLog={addLog} updateTariffMaster={updateTariffMaster} />}
+                        {view === 'history' && <InvoiceFlowView logs={logs} invoices={invoices} clinics={clinics} treatments={treatments} setLogs={setLogs} setInvoices={setInvoices} profile={profile} updateTariffMaster={updateTariffMaster} schedule={schedule}/>}
+                        {view === 'agenda' && <CalendarView schedule={schedule} setSchedule={setSchedule} clinics={clinics} />}
+                        {view === 'reports' && <ReportsView logs={logs} clinics={clinics} invoices={invoices} schedule={schedule} />}
+                        {view === 'settings' && <SettingsView profile={profile} onSaveProfile={handleSaveProfile} clinics={clinics} setClinics={setClinics} treatments={treatments} setTreatments={setTreatments} tariffs={tariffs} logs={logs} setLogs={setLogs} invoices={invoices} setInvoices={setInvoices} />}
+                    </div>
+                    <nav className="fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around p-2 z-50 md:justify-center md:gap-4 pb-safe">
+                        <button onClick={() => setView('register')} className={`flex flex-col items-center p-2 rounded-lg transition-colors ${view === 'register' ? 'text-purple-600' : 'text-gray-400 hover:bg-gray-50'}`}><Icon name="Edit3" size={20} /><span className="text-[9px] font-bold mt-1">TRATAMIENTOS</span></button>
+                        <button onClick={() => setView('history')} className={`flex flex-col items-center p-2 rounded-lg transition-colors ${view === 'history' ? 'text-purple-600' : 'text-gray-400 hover:bg-gray-50'}`}><Icon name="Printer" size={20} /><span className="text-[9px] font-bold mt-1">FACTURAS</span></button>
+                        <button onClick={() => setView('agenda')} className={`flex flex-col items-center p-2 rounded-lg transition-colors ${view === 'agenda' ? 'text-purple-600' : 'text-gray-400 hover:bg-gray-50'}`}><Icon name="Calendar" size={20} /><span className="text-[9px] font-bold mt-1">AGENDA</span></button>
+                        <button onClick={() => setView('reports')} className={`flex flex-col items-center p-2 rounded-lg transition-colors ${view === 'reports' ? 'text-purple-600' : 'text-gray-400 hover:bg-gray-50'}`}><Icon name="Activity" size={20} /><span className="text-[9px] font-bold mt-1">INFORMES</span></button>
+                        <button onClick={() => setView('settings')} className={`flex flex-col items-center p-2 rounded-lg transition-colors ${view === 'settings' ? 'text-purple-600' : 'text-gray-400 hover:bg-gray-50'}`}><Icon name="UserCheck" size={20} /><span className="text-[9px] font-bold mt-1">AJUSTES</span></button>
+                    </nav>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

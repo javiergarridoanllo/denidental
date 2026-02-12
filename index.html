@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DeniDental Pro - Gestión v9.2</title>
+    <title>DeniDental Pro - Gestión v8.5 (Fix Backup Agenda)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
     
     <!-- LIBRERÍAS -->
@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- jsPDF para Facturas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
@@ -36,11 +37,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .bar-container { background: #f1f5f9; border-radius: 4px; overflow: hidden; height: 8px; }
         .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
-        
-        /* Calendario Grid */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        .calendar-day { aspect-ratio: 1; border-radius: 0.5rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; cursor: pointer; border: 1px solid transparent; font-size: 0.9rem; position: relative; padding-top: 4px; }
-        .calendar-day:hover { background-color: #f3f4f6; }
     </style>
 </head>
 <body>
@@ -111,7 +107,7 @@
                     localStorage.setItem(`deni_v9_${key}`, JSON.stringify(data));
                 } catch (e) { 
                     if(e.name === 'QuotaExceededError') {
-                        alert("⚠️ MEMORIA LLENA: Descarga copia de seguridad.");
+                        alert("⚠️ MEMORIA LLENA: Descarga copia de seguridad en Ajustes.");
                     }
                 }
             },
@@ -123,7 +119,10 @@
                 if (!window.jspdf) return alert("Error: Librería PDF no cargada.");
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-                const colorDark = [30, 41, 59]; const colorLight = [100, 116, 139]; const colorAccent = [126, 34, 206];
+                
+                const colorDark = [30, 41, 59];
+                const colorLight = [100, 116, 139];
+                const colorAccent = [126, 34, 206];
                 const invDate = new Date(invoice.date);
 
                 if (profile.logo) {
@@ -142,6 +141,7 @@
 
                 doc.setFontSize(24); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
                 doc.text("FACTURA", 195, 25, { align: 'right' });
+                
                 doc.setFontSize(10); doc.setTextColor(...colorLight); doc.setFont(undefined, 'normal');
                 doc.text(`Nº ${invoice.series}-${invoice.number.toString().padStart(4, '0')}`, 195, 32, { align: 'right' });
                 doc.text(`Fecha: ${invDate.toLocaleDateString()}`, 195, 37, { align: 'right' });
@@ -159,10 +159,10 @@
                 doc.text(profile.city || '', 15, currentYEmisor); currentYEmisor += 5;
                 doc.text(profile.phone || '', 15, currentYEmisor);
 
-                doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.text("FACTURAR A:", 110, yInfo);
+                doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.text("FACTURAR A:", 110, yInfo - 5);
                 doc.setFontSize(11); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
                 const clientName = doc.splitTextToSize(invoice.clinicName || 'Clínica', 85);
-                doc.text(clientName, 110, yInfo + 5);
+                doc.text(clientName, 110, yInfo);
                 let currentYClient = yInfo + 5 + (clientName.length * 5);
                 doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorLight);
                 doc.text(invoice.clinicCif || '', 110, currentYClient); currentYClient += 5;
@@ -192,7 +192,8 @@
                     bodyStyles: { textColor: colorDark, fontSize: 10, cellPadding: 4 },
                     columnStyles: { 0: { cellWidth: 140 }, 1: { halign: 'right', fontStyle: 'bold' } },
                     didDrawPage: (d) => {
-                        doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.5);
+                        doc.setDrawColor(226, 232, 240); 
+                        doc.setLineWidth(0.5);
                         doc.line(15, startTableY - 1, 195, startTableY - 1);
                         doc.line(15, d.cursor.y, 195, d.cursor.y);
                     }
@@ -227,7 +228,7 @@
             }
         };
 
-        // --- 3. COMPONENTES UI ---
+        // --- 3. COMPONENTES UI GENÉRICOS ---
         const Input = ({ label, type = "text", ...props }) => (
             <div className="mb-3 w-full">
                 {label && <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{label}</label>}
@@ -240,6 +241,7 @@
                 <textarea className="input-field resize-none" rows={rows} {...props}></textarea>
             </div>
         );
+
         const Modal = ({ title, onClose, children }) => (
             <div className="modal-overlay" onClick={onClose}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -252,22 +254,7 @@
             </div>
         );
 
-        // --- 4. VISTAS ---
-        const LoginScreen = ({ onLogin }) => {
-            const [pass, setPass] = useState('');
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-purple-600 p-4">
-                    <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-                        <div className="mb-6 flex justify-center text-purple-600"><Icon name="Lock" size={48} /></div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Seguro</h2>
-                        <p className="text-gray-500 mb-6">Introduce tu código de acceso personal.</p>
-                        <input type="password" value={pass} onChange={e => setPass(e.target.value)} className="input-field text-center text-2xl tracking-widest mb-4" placeholder="•••••" maxLength={5} />
-                        <button onClick={() => pass === '36202' ? onLogin() : alert('Código incorrecto')} className="btn btn-primary w-full py-3">Entrar</button>
-                    </div>
-                </div>
-            );
-        };
-
+        // --- 4. VISTAS PRINCIPALES ---
         const RegisterView = ({ clinics, treatments, tariffs, addLog, updateTariffMaster }) => {
              const activeClinics = clinics.filter(c => c.active !== false);
             const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], clinicId: '', treatmentId: '', price: '', discount: '0', extra: '', obs: '' });
@@ -443,35 +430,55 @@
                 daysTxt = uniqueDates.length > 0 ? `${uniqueDates.join(", ")}` : "";
 
                 if (clinic.paymentType === 'fixed') {
+                    // Si es fijo, intentamos sacar días de la AGENDA
                     const sched = schedule.filter(s => s.clinicId === clinic.id && s.date.startsWith(month));
+                    
                     if (sched.length > 0) {
                         dCount = sched.reduce((acc, s) => acc + safeNum(s.weight), 0);
                         const schedDays = [...new Set(sched.map(s => new Date(s.date).getDate()))].sort((a,b)=>a-b);
                         daysTxt = schedDays.join(", ");
                     } else {
+                        // Fallback a logs si no hay agenda
                         dCount = uniqueDates.length;
+                        daysTxt = uniqueDates.join(", ");
                     }
                     dRate = safeNum(clinic.dailyRate);
                     totalAmount = dCount * dRate;
                 } else {
+                    // Si es porcentaje, suma de logs
                     totalAmount = unbilledLogs.reduce((sum, l) => sum + safeNum(l.earned), 0);
+                    daysTxt = uniqueDates.join(", ");
                 }
 
-                setGenData({ amount: totalAmount, daysText: daysTxt, daysCount: dCount, dailyRate: dRate });
+                setGenData({ 
+                    amount: totalAmount, 
+                    daysText: daysTxt, // Solo números: "1, 5, 20"
+                    daysCount: dCount, 
+                    dailyRate: dRate 
+                });
                 setShowGenModal(true);
             };
 
             const confirmGenerate = () => {
                 const clinic = clinics.find(c => c.id === filterClinicId);
-                if (!clinic) return;
+                if (!clinic) return; // Safeguard
 
-                const lastNum = invoices.filter(inv => inv.series === clinic.series).reduce((max, inv) => Math.max(max, safeNum(inv.number)), 0);
+                const lastNum = invoices
+                    .filter(inv => inv.series === clinic.series)
+                    .reduce((max, inv) => Math.max(max, safeNum(inv.number)), 0);
+                
                 const nextNum = lastNum + 1;
                 const newInvoiceId = DB.uuid();
 
                 const newInvoice = {
-                    id: newInvoiceId, series: clinic.series, number: nextNum, date: invoiceDate,
-                    monthStr: month, clinicId: clinic.id, clinicName: clinic.name, clinicCif: clinic.cif,
+                    id: newInvoiceId,
+                    series: clinic.series,
+                    number: nextNum,
+                    date: invoiceDate,
+                    monthStr: month,
+                    clinicId: clinic.id,
+                    clinicName: clinic.name,
+                    clinicCif: clinic.cif,
                     clinicAddress: clinic.address, 
                     amount: safeNum(genData.amount),
                     daysText: genData.daysText, 
@@ -799,63 +806,15 @@
                 reader.readAsText(file);
             };
             
-            const handleRestorePaste = () => {
-                const text = prompt("Pega aquí el código de la copia de seguridad:");
-                if (text) {
-                    try {
-                        const data = JSON.parse(text);
-                        if(confirm("¿Restaurar datos?")) {
-                            if(data.profile) { setLocalProfile(data.profile); onSaveProfile(data.profile); }
-                            if(data.clinics) setClinics(data.clinics);
-                            if(data.treatments) setTreatments(data.treatments);
-                            if(data.logs) setLogs(data.logs);
-                            if(data.tariffs) DB.set('tariffs', data.tariffs);
-                            if(data.invoices) setInvoices(data.invoices);
-                            alert("Restaurado.");
-                            window.location.reload();
-                        }
-                    } catch(e) { alert("Código inválido."); }
-                }
-            };
-            
-            const handleShareBackup = async () => {
-                const data = { profile, clinics, treatments, logs, tariffs, invoices };
-                const jsonStr = JSON.stringify(data);
-                
-                // Opción 1: Web Share API (Archivo)
-                try {
-                    const blob = new Blob([jsonStr], {type: 'application/json'});
-                    const file = new File([blob], `backup_${new Date().toISOString().slice(0,10)}.json`, { type: 'application/json' });
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({ files: [file], title: 'Backup DeniDental' });
-                        return;
-                    }
-                } catch(e) { console.log("Share file failed, trying text..."); }
-
-                // Opción 2: Web Share API (Texto) - Para WhatsApp a veces va mejor
-                try {
-                    await navigator.share({ title: 'Backup DeniDental', text: jsonStr });
-                } catch(e) {
-                    // Fallback: Copiar al portapapeles
-                    navigator.clipboard.writeText(jsonStr).then(() => alert("Copia copiada al portapapeles. Pégala en WhatsApp/Notas."));
-                }
-            };
-
             const defaultEmailTemplate = "Hola {clinica},\n\nAdjunto le remito la factura {numero} correspondiente a los servicios prestados en {mes} {anio}.\n\nUn cordial saludo,\n\n{emisor}";
 
             return (
                 <div className="max-w-4xl mx-auto space-y-8 fade-in pb-20 p-4">
                     <div className="card p-6 border-l-4 border-blue-500 bg-blue-50/50">
                         <h3 className="font-bold text-lg mb-4 text-blue-700 flex gap-2"><Icon name="Save"/> Gestión de Datos (Backup)</h3>
-                        <div className="flex flex-col gap-4">
-                             <div className="flex gap-2">
-                                <button onClick={handleShareBackup} className="btn btn-primary flex-1"><Icon name="Upload" size={18}/> Compartir Copia (WhatsApp)</button>
-                                <button onClick={handleDownloadBackup} className="btn btn-secondary"><Icon name="Download" size={18}/></button>
-                             </div>
-                             <div className="flex gap-2">
-                                 <label className="btn btn-secondary flex-1 cursor-pointer"><Icon name="Download" size={18}/> Cargar Archivo<input type="file" onChange={handleRestoreBackup} className="hidden" accept=".json" /></label>
-                                 <button onClick={handleRestorePaste} className="btn btn-secondary flex-1"><Icon name="Edit3" size={18}/> Pegar Código</button>
-                             </div>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button onClick={handleDownloadBackup} className="btn btn-primary w-full flex-1"><Icon name="Download" size={18}/> Descargar Copia</button>
+                            <label className="btn btn-secondary w-full flex-1 cursor-pointer"><Icon name="Upload" size={18}/> Restaurar Copia<input type="file" onChange={handleRestoreBackup} className="hidden" accept=".json" /></label>
                         </div>
                     </div>
 
@@ -918,7 +877,6 @@
         // 5. APP PRINCIPAL
         // ==========================================
         function App() {
-            const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [view, setView] = useState('register');
             const [profile, setProfile] = useState(DB.get('profile', { irpf: '15' }));
             const [clinics, setClinics] = useState(DB.get('clinics', []));
@@ -955,12 +913,10 @@
                 alert("Perfil guardado correctamente.");
             };
 
-            if (!isAuthenticated) return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
-
             return (
                 <div className="min-h-screen pb-20">
                     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
-                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v9.2</span></div></div>
+                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v9.1</span></div></div>
                     </header>
                     <div className="p-4 md:p-8">
                         {view === 'register' && <RegisterView clinics={clinics} treatments={treatments} tariffs={tariffs} addLog={addLog} updateTariffMaster={updateTariffMaster} />}

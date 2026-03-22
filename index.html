@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DeniDental Pro - Gestión v9.6</title>
+    <title>DeniDental Pro - Gestión v10.1 (Backup Fix)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
     
     <!-- LIBRERÍAS -->
@@ -103,16 +103,16 @@
         const DB = {
             get: (key, fallback) => {
                 try {
-                    const data = localStorage.getItem(`deni_v9_${key}`);
+                    const data = localStorage.getItem(`deni_v10_${key}`);
                     return data ? JSON.parse(data) : fallback;
                 } catch (e) { return fallback; }
             },
             set: (key, data) => {
                 try {
-                    localStorage.setItem(`deni_v9_${key}`, JSON.stringify(data));
+                    localStorage.setItem(`deni_v10_${key}`, JSON.stringify(data));
                 } catch (e) { 
                     if(e.name === 'QuotaExceededError') {
-                        alert("⚠️ MEMORIA LLENA: Descarga copia de seguridad en Ajustes.");
+                        alert("⚠️ MEMORIA LLENA: Descarga copia de seguridad.");
                     }
                 }
             },
@@ -166,7 +166,8 @@
 
                 doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.text("FACTURAR A:", 110, yInfo);
                 doc.setFontSize(11); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
-                const clientName = doc.splitTextToSize(invoice.clinicName || 'Clínica', 85);
+                const clientNameStr = invoice.clinicName || 'Clínica';
+                const clientName = doc.splitTextToSize(clientNameStr, 85);
                 doc.text(clientName, 110, yInfo + 5);
                 let currentYClient = yInfo + 5 + (clientName.length * 5);
                 doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorLight);
@@ -177,7 +178,6 @@
                 const startTableY = Math.max(currentYEmisor, currentYClient) + 15;
                 const [year, month] = invoice.monthStr.split('-');
                 const monthName = new Date(year, month - 1).toLocaleString('es-ES', { month: 'long' });
-                
                 const daysWorked = invoice.daysText ? `Días trabajados: ${invoice.daysText}` : "";
 
                 const totalGross = safeNum(invoice.amount);
@@ -210,7 +210,8 @@
                 doc.setTextColor(...colorDark); doc.text(`${totalGross.toFixed(2)} €`, 195, finalY, { align: 'right' });
 
                 doc.setFontSize(8); doc.setTextColor(...colorLight); doc.setFont(undefined, 'italic');
-                doc.text("* Servicios exentos de base imponible o IVA", 15, finalY + 5);
+                const footerText = profile.invoiceFooterText || "* Servicios exentos de base imponible o IVA";
+                doc.text(footerText, 15, finalY + 5);
 
                 doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorDark);
                 doc.text(`Retenciones IRPF (${irpfRate}%)`, 140, finalY + 6, { align: 'right' });
@@ -218,14 +219,14 @@
 
                 doc.setDrawColor(226, 232, 240); doc.line(140, finalY + 10, 195, finalY + 10);
 
-                doc.setFontSize(14); doc.setTextColor(...colorAccent); doc.setFont(undefined, 'bold');
+                const totalColorHex = profile.invoiceTotalColor || "#7e22ce";
+                doc.setFontSize(14); doc.setTextColor(totalColorHex); doc.setFont(undefined, 'bold');
                 doc.text("TOTAL A PERCIBIR", 140, finalY + 18, { align: 'right' });
                 doc.text(`${totalNet.toFixed(2)} €`, 195, finalY + 18, { align: 'right' });
 
                 const footerY = 270;
                 doc.setFontSize(9); doc.setTextColor(...colorDark); doc.setFont(undefined, 'normal');
                 doc.text(`Vigo, a ${invDate.getDate()} de ${invDate.toLocaleString('es-ES', { month: 'long' })} de ${invDate.getFullYear()}`, 15, footerY);
-                
                 doc.setFontSize(8); doc.setTextColor(...colorLight);
                 doc.text("Forma de pago:", 15, footerY + 6);
                 doc.setTextColor(...colorDark); doc.text(`Transferencia bancaria a IBAN: ${profile.iban || 'Pendiente configurar'}`, 15, footerY + 11);
@@ -247,7 +248,6 @@
                 <textarea className="input-field resize-none" rows={rows} {...props}></textarea>
             </div>
         );
-
         const Modal = ({ title, onClose, children }) => (
             <div className="modal-overlay" onClick={onClose}>
                 <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -260,58 +260,24 @@
             </div>
         );
 
-        // --- 4. VISTAS PRINCIPALES ---
-        
-        // LOGIN SCREEN RE-DISEÑADO
+        // --- 4. VISTAS ---
         const LoginScreen = ({ onLogin }) => {
             const [pass, setPass] = useState('');
             const [error, setError] = useState(false);
-
             const handleSubmit = (e) => {
                 e.preventDefault();
-                if (pass === '36202') {
-                    onLogin();
-                } else {
-                    setError(true);
-                    setPass('');
-                    setTimeout(() => setError(false), 2000);
-                }
+                if (pass === '36202') onLogin(); else { setError(true); setPass(''); setTimeout(() => setError(false), 2000); }
             };
-
             return (
                 <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-700 to-blue-600 p-4">
                     <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-                        <div className="mb-6 flex justify-center">
-                            <div className="bg-purple-100 p-4 rounded-full text-purple-600">
-                                <Icon name="Lock" size={32} />
-                            </div>
-                        </div>
+                        <div className="mb-6 flex justify-center"><div className="bg-purple-100 p-4 rounded-full text-purple-600"><Icon name="Lock" size={32} /></div></div>
                         <h2 className="text-2xl font-extrabold text-gray-800 mb-2">Bienvenido</h2>
-                        <p className="text-gray-500 mb-8 text-sm">Introduce tu código de acceso para continuar.</p>
-                        
+                        <p className="text-gray-500 mb-8 text-sm">Introduce tu código de acceso.</p>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="relative">
-                                <input 
-                                    type="password" 
-                                    value={pass} 
-                                    onChange={e => { setPass(e.target.value); setError(false); }} 
-                                    className={`w-full border-2 rounded-xl p-4 text-center text-2xl tracking-[0.5em] font-bold outline-none transition-all ${error ? 'border-red-500 bg-red-50 text-red-900' : 'border-gray-200 focus:border-purple-500 text-gray-800 bg-white'}`}
-                                    placeholder="•••••" 
-                                    inputMode="numeric"
-                                    maxLength={5}
-                                    autoFocus
-                                />
-                            </div>
-                            
-                            <button 
-                                type="submit" 
-                                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                <span>Desbloquear</span>
-                            </button>
+                            <input type="password" value={pass} onChange={e => { setPass(e.target.value); setError(false); }} className={`w-full border-2 rounded-xl p-4 text-center text-2xl tracking-[0.5em] font-bold outline-none transition-all ${error ? 'border-red-500 bg-red-50 text-red-900' : 'border-gray-200 focus:border-purple-500 text-gray-800 bg-white'}`} placeholder="•••••" inputMode="numeric" maxLength={5} autoFocus />
+                            <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg transform transition active:scale-95">Desbloquear</button>
                         </form>
-                        
-                        {error && <p className="text-red-500 text-sm mt-4 font-medium animate-pulse">Código incorrecto</p>}
                     </div>
                 </div>
             );
@@ -523,7 +489,7 @@
 
             const confirmGenerate = () => {
                 const clinic = clinics.find(c => c.id === filterClinicId);
-                if (!clinic) return; // Safeguard
+                if (!clinic) return;
 
                 const lastNum = invoices
                     .filter(inv => inv.series === clinic.series)
@@ -539,7 +505,8 @@
                     date: invoiceDate,
                     monthStr: month,
                     clinicId: clinic.id,
-                    clinicName: clinic.name,
+                    clinicName: clinic.name, // NVL Logic applied here implicitly via saveClinic but lets explicit
+                    clinicName: clinic.businessName || clinic.name,
                     clinicCif: clinic.cif,
                     clinicAddress: clinic.address, 
                     amount: safeNum(genData.amount),
@@ -781,8 +748,12 @@
         };
 
         const SettingsView = ({ profile, onSaveProfile, clinics, setClinics, treatments, setTreatments, tariffs, logs, setLogs, invoices, setInvoices }) => {
-            const [localProfile, setLocalProfile] = useState(profile);
-            const [clinicForm, setClinicForm] = useState({ id: null, name: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' });
+            const [localProfile, setLocalProfile] = useState({
+                invoiceFooterText: '* Servicios exentos de base imponible o IVA',
+                invoiceTotalColor: '#7e22ce',
+                ...profile
+            });
+            const [clinicForm, setClinicForm] = useState({ id: null, name: '', businessName: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' });
             const [newTreat, setNewTreat] = useState('');
             const [viewHistory, setViewHistory] = useState(null);
             
@@ -809,18 +780,18 @@
                 } else {
                     setClinics([...clinics, { ...newC, id: DB.uuid() }]);
                 }
-                setClinicForm({ id: null, name: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' });
+                setClinicForm({ id: null, name: '', businessName: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' });
             };
 
             const editClinic = (c) => {
-                setClinicForm({ paymentType: 'percent', dailyRate: '', theoreticalPercentage: '', email: '', ...c });
+                setClinicForm({ paymentType: 'percent', dailyRate: '', theoreticalPercentage: '', email: '', businessName: '', ...c });
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
 
             const addT = () => { if(!newTreat) return; setTreatments([...treatments, { id: DB.uuid(), name: newTreat }]); setNewTreat(''); };
             
             const handleDownloadBackup = () => {
-                const data = { profile, clinics, treatments, logs, tariffs, invoices };
+                const data = { profile, clinics, treatments, logs, tariffs, invoices, schedule: DB.get('schedule', []) };
                 const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -844,6 +815,7 @@
                                 if(data.logs) setLogs(data.logs);
                                 if(data.tariffs) DB.set('tariffs', data.tariffs);
                                 if(data.invoices) setInvoices(data.invoices);
+                                if(data.schedule) DB.set('schedule', data.schedule);
                                 alert("Copia restaurada con éxito.");
                                 window.location.reload();
                             } catch (quotaError) {
@@ -857,6 +829,7 @@
                                         if(data.logs) setLogs(data.logs);
                                         if(data.tariffs) DB.set('tariffs', data.tariffs);
                                         if(data.invoices) setInvoices(data.invoices);
+                                        if(data.schedule) DB.set('schedule', data.schedule);
                                         alert("Restaurado parcialmente (sin logo).");
                                         window.location.reload();
                                     }
@@ -866,6 +839,24 @@
                     } catch (err) { alert("Error al leer el archivo de copia."); }
                 };
                 reader.readAsText(file);
+            };
+            
+            const handleShareBackup = async () => {
+                const data = { profile, clinics, treatments, logs, tariffs, invoices, schedule: DB.get('schedule', []) };
+                const jsonStr = JSON.stringify(data);
+                try {
+                    const blob = new Blob([jsonStr], {type: 'application/json'});
+                    const file = new File([blob], `backup_${new Date().toISOString().slice(0,10)}.json`, { type: 'application/json' });
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: 'Backup DeniDental' });
+                        return;
+                    }
+                } catch(e) { }
+                try {
+                    await navigator.share({ title: 'Backup DeniDental', text: jsonStr });
+                } catch(e) {
+                    navigator.clipboard.writeText(jsonStr).then(() => alert("Copia copiada al portapapeles. Pégala en WhatsApp/Notas."));
+                }
             };
             
             const handleRestorePaste = () => {
@@ -880,6 +871,7 @@
                             if(data.logs) setLogs(data.logs);
                             if(data.tariffs) DB.set('tariffs', data.tariffs);
                             if(data.invoices) setInvoices(data.invoices);
+                            if(data.schedule) DB.set('schedule', data.schedule);
                             alert("Restaurado.");
                             window.location.reload();
                         }
@@ -887,42 +879,21 @@
                 }
             };
             
-            const handleShareBackup = async () => {
-                const data = { profile, clinics, treatments, logs, tariffs, invoices };
-                const jsonStr = JSON.stringify(data);
-                
-                // Opción 1: Web Share API (Archivo)
-                try {
-                    const blob = new Blob([jsonStr], {type: 'application/json'});
-                    const file = new File([blob], `backup_${new Date().toISOString().slice(0,10)}.json`, { type: 'application/json' });
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({ files: [file], title: 'Backup DeniDental' });
-                        return;
-                    }
-                } catch(e) { console.log("Share file failed, trying text..."); }
-
-                // Opción 2: Web Share API (Texto) - Para WhatsApp a veces va mejor
-                try {
-                    await navigator.share({ title: 'Backup DeniDental', text: jsonStr });
-                } catch(e) {
-                    // Fallback: Copiar al portapapeles
-                    navigator.clipboard.writeText(jsonStr).then(() => alert("Copia copiada al portapapeles. Pégala en WhatsApp/Notas."));
-                }
-            };
-
             const defaultEmailTemplate = "Hola {clinica},\n\nAdjunto le remito la factura {numero} correspondiente a los servicios prestados en {mes} {anio}.\n\nUn cordial saludo,\n\n{emisor}";
 
             return (
                 <div className="max-w-4xl mx-auto space-y-8 fade-in pb-20 p-4">
                     <div className="card p-6 border-l-4 border-blue-500 bg-blue-50/50">
                         <h3 className="font-bold text-lg mb-4 text-blue-700 flex gap-2"><Icon name="Save"/> Gestión de Datos (Backup)</h3>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <button onClick={handleShareBackup} className="btn btn-primary flex-1"><Icon name="Upload" size={18}/> Compartir Copia (WhatsApp)</button>
-                            <button onClick={handleDownloadBackup} className="btn btn-secondary"><Icon name="Download" size={18}/></button>
-                        </div>
-                        <div className="flex gap-2 mt-4">
-                            <label className="btn btn-secondary flex-1 cursor-pointer"><Icon name="Download" size={18}/> Cargar Archivo<input type="file" onChange={handleRestoreBackup} className="hidden" accept=".json" /></label>
-                            <button onClick={handleRestorePaste} className="btn btn-secondary flex-1"><Icon name="Edit3" size={18}/> Pegar Código</button>
+                        <div className="flex flex-col gap-4">
+                             <div className="flex gap-2">
+                                <button onClick={handleShareBackup} className="btn btn-primary flex-1"><Icon name="Upload" size={18}/> Compartir Copia (WhatsApp)</button>
+                                <button onClick={handleDownloadBackup} className="btn btn-secondary"><Icon name="Download" size={18}/></button>
+                             </div>
+                             <div className="flex gap-2">
+                                 <label className="btn btn-secondary flex-1 cursor-pointer"><Icon name="Download" size={18}/> Cargar Archivo<input type="file" onChange={handleRestoreBackup} className="hidden" accept=".json" /></label>
+                                 <button onClick={handleRestorePaste} className="btn btn-secondary flex-1"><Icon name="Edit3" size={18}/> Pegar Código</button>
+                             </div>
                         </div>
                     </div>
 
@@ -934,6 +905,13 @@
                             <Input label="Dirección" value={localProfile.address || ''} onChange={e => setLocalProfile({...localProfile, address: e.target.value})} />
                             <div className="grid grid-cols-2 gap-2"><Input label="CP/Ciudad" value={localProfile.city || ''} onChange={e => setLocalProfile({...localProfile, city: e.target.value})} /><Input label="% IRPF" value={localProfile.irpf || ''} onChange={e => setLocalProfile({...localProfile, irpf: e.target.value})} /></div>
                             <Input label="IBAN" value={localProfile.iban || ''} onChange={e => setLocalProfile({...localProfile, iban: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t pt-4 border-gray-100">
+                            <Input label="Texto pie de factura (*)" value={localProfile.invoiceFooterText} onChange={e => setLocalProfile({...localProfile, invoiceFooterText: e.target.value})} />
+                            <div className="mb-3 w-full">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Color 'Total a Percibir'</label>
+                                <input type="color" value={localProfile.invoiceTotalColor} onChange={e => setLocalProfile({...localProfile, invoiceTotalColor: e.target.value})} className="w-full h-12 rounded-lg cursor-pointer border border-gray-200" />
+                            </div>
                         </div>
                         <div className="mt-6 flex flex-col md:flex-row gap-4 items-center justify-between border-t pt-4 border-gray-100">
                             <div className="w-full md:w-auto flex flex-col items-center md:items-start gap-2">
@@ -957,6 +935,7 @@
                             <h3 className="font-bold mb-4">{clinicForm.id ? 'Editar Clínica' : 'Nueva Clínica'}</h3>
                             <div className="space-y-3 bg-gray-50 p-4 rounded mb-2">
                                 <Input placeholder="Nombre" value={clinicForm.name} onChange={e => setClinicForm({...clinicForm, name: e.target.value})} />
+                                <Input placeholder="Razón Social (Para Factura)" value={clinicForm.businessName} onChange={e => setClinicForm({...clinicForm, businessName: e.target.value})} />
                                 <Input placeholder="Email" type="email" value={clinicForm.email} onChange={e => setClinicForm({...clinicForm, email: e.target.value})} />
                                 <div className="mb-2">
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Modelo de Cobro</label>
@@ -966,7 +945,7 @@
                                 <div className="flex gap-2"><Input label="Serie Fac." placeholder="Ej: A" value={clinicForm.series} onChange={e => setClinicForm({...clinicForm, series: e.target.value})} /><Input label="CIF" placeholder="CIF" value={clinicForm.cif} onChange={e => setClinicForm({...clinicForm, cif: e.target.value})} /></div>
                                 <Input placeholder="Dirección" value={clinicForm.address} onChange={e => setClinicForm({...clinicForm, address: e.target.value})} />
                                 <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer"><input type="checkbox" checked={clinicForm.active !== false} onChange={e => setClinicForm({...clinicForm, active: e.target.checked})} /> Clínica Activa</label>
-                                <div className="flex gap-2 pt-2">{clinicForm.id && <button onClick={() => setClinicForm({ id: null, name: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' })} className="btn btn-secondary w-full text-sm">Cancelar</button>}<button onClick={saveClinic} className="btn btn-secondary w-full text-sm">{clinicForm.id ? 'Actualizar' : 'Añadir'}</button></div>
+                                <div className="flex gap-2 pt-2">{clinicForm.id && <button onClick={() => setClinicForm({ id: null, name: '', businessName: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' })} className="btn btn-secondary w-full text-sm">Cancelar</button>}<button onClick={saveClinic} className="btn btn-secondary w-full text-sm">{clinicForm.id ? 'Actualizar' : 'Añadir'}</button></div>
                             </div>
                             <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">{clinics.map(c => (<li key={c.id} className={`flex justify-between p-2 border-b ${c.active === false ? 'bg-gray-100 text-gray-400' : ''}`}><div className="flex flex-col"><span>{c.name} {c.active === false && '(Inactiva)'}</span><span className="text-xs text-gray-500">{c.paymentType === 'fixed' ? `Fijo: ${c.dailyRate}€/día` : `${c.percentage}%`} - Serie: {c.series}</span></div><button onClick={() => editClinic(c)} className="text-blue-500 hover:text-blue-700"><Icon name="Edit3" size={14}/></button></li>))}</ul>
                         </div>

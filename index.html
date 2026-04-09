@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DeniDental Pro - Gestión v10.1 (Backup Fix)</title>
+    <title>DeniDental Pro - Gestión v10.2 (Anexos & Contacto)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
     
     <!-- LIBRERÍAS -->
@@ -72,6 +72,7 @@
             ArrowRight: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>,
             Lock: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
             File: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+            FileText: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,
             Share: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
         };
 
@@ -130,6 +131,7 @@
                 const colorAccent = [126, 34, 206];
                 const invDate = new Date(invoice.date);
 
+                // --- 1. CABECERA ---
                 if (profile.logo) {
                     try {
                         const imgProps = doc.getImageProperties(profile.logo);
@@ -151,25 +153,28 @@
                 doc.text(`Nº ${invoice.series}-${invoice.number.toString().padStart(4, '0')}`, 195, 32, { align: 'right' });
                 doc.text(`Fecha: ${invDate.toLocaleDateString()}`, 195, 37, { align: 'right' });
 
+                // --- 2. DATOS EMISOR / CLIENTE ---
                 const yInfo = 60;
-                doc.setFontSize(9); doc.setTextColor(...colorLight); doc.text("EMISOR", 15, yInfo);
+                doc.setFontSize(9); doc.setTextColor(...colorLight); doc.text("EMISOR", 15, yInfo - 5);
                 doc.setFontSize(10); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
                 const emisorName = doc.splitTextToSize(profile.fullName || 'Nombre Profesional', 85);
-                doc.text(emisorName, 15, yInfo + 5);
-                let currentYEmisor = yInfo + 5 + (emisorName.length * 5);
+                doc.text(emisorName, 15, yInfo);
+                
+                let currentYEmisor = yInfo + (emisorName.length * 5);
                 doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorLight);
                 doc.text(profile.dni || '', 15, currentYEmisor); currentYEmisor += 5;
-                const emisorAddr = doc.splitTextToSize(profile.address || '', 85);
-                doc.text(emisorAddr, 15, currentYEmisor); currentYEmisor += (emisorAddr.length * 5);
+                doc.text(profile.address || '', 15, currentYEmisor); currentYEmisor += 5;
                 doc.text(profile.city || '', 15, currentYEmisor); currentYEmisor += 5;
-                doc.text(profile.phone || '', 15, currentYEmisor);
+                doc.text(profile.phone || '', 15, currentYEmisor); currentYEmisor += 5;
+                // Nuevo campo: Email
+                if (profile.emailContact) { doc.text(profile.emailContact, 15, currentYEmisor); currentYEmisor += 5; }
 
-                doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.text("FACTURAR A:", 110, yInfo);
+                doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.text("FACTURAR A:", 110, yInfo - 5);
                 doc.setFontSize(11); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
                 const clientNameStr = invoice.clinicName || 'Clínica';
                 const clientName = doc.splitTextToSize(clientNameStr, 85);
-                doc.text(clientName, 110, yInfo + 5);
-                let currentYClient = yInfo + 5 + (clientName.length * 5);
+                doc.text(clientName, 110, yInfo);
+                let currentYClient = yInfo + (clientName.length * 5);
                 doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorLight);
                 doc.text(invoice.clinicCif || '', 110, currentYClient); currentYClient += 5;
                 const clientAddr = doc.splitTextToSize(invoice.clinicAddress || '', 85);
@@ -197,8 +202,7 @@
                     bodyStyles: { textColor: colorDark, fontSize: 10, cellPadding: 4 },
                     columnStyles: { 0: { cellWidth: 140 }, 1: { halign: 'right', fontStyle: 'bold' } },
                     didDrawPage: (d) => {
-                        doc.setDrawColor(226, 232, 240); 
-                        doc.setLineWidth(0.5);
+                        doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.5);
                         doc.line(15, startTableY - 1, 195, startTableY - 1);
                         doc.line(15, d.cursor.y, 195, d.cursor.y);
                     }
@@ -209,6 +213,7 @@
                 doc.text("Base Imponible", 140, finalY, { align: 'right' });
                 doc.setTextColor(...colorDark); doc.text(`${totalGross.toFixed(2)} €`, 195, finalY, { align: 'right' });
 
+                // Footer Personalizado
                 doc.setFontSize(8); doc.setTextColor(...colorLight); doc.setFont(undefined, 'italic');
                 const footerText = profile.invoiceFooterText || "* Servicios exentos de base imponible o IVA";
                 doc.text(footerText, 15, finalY + 5);
@@ -219,6 +224,7 @@
 
                 doc.setDrawColor(226, 232, 240); doc.line(140, finalY + 10, 195, finalY + 10);
 
+                // Color Personalizado Total
                 const totalColorHex = profile.invoiceTotalColor || "#7e22ce";
                 doc.setFontSize(14); doc.setTextColor(totalColorHex); doc.setFont(undefined, 'bold');
                 doc.text("TOTAL A PERCIBIR", 140, finalY + 18, { align: 'right' });
@@ -232,6 +238,132 @@
                 doc.setTextColor(...colorDark); doc.text(`Transferencia bancaria a IBAN: ${profile.iban || 'Pendiente configurar'}`, 15, footerY + 11);
                 
                 doc.save(`Factura_${invoice.series}${invoice.number}.pdf`);
+            },
+            
+            // --- NUEVO: GENERACIÓN DE ANEXO (DESGLOSE) ---
+            generateAnnex: (profile, invoice, logs) => {
+                if (!window.jspdf) return alert("Error: Librería PDF no cargada.");
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                const colorDark = [30, 41, 59];
+                const colorLight = [100, 116, 139];
+                const colorAccent = [126, 34, 206];
+                const invDate = new Date(invoice.date);
+
+                // Cabecera (Símil a Factura)
+                if (profile.logo) {
+                    try {
+                        const imgProps = doc.getImageProperties(profile.logo);
+                        const maxWidth = 50; const maxHeight = 30;
+                        let w = imgProps.width; let h = imgProps.height;
+                        if (w > maxWidth) { h = (maxWidth * h) / w; w = maxWidth; }
+                        if (h > maxHeight) { w = (maxHeight * w) / h; h = maxHeight; }
+                        doc.addImage(profile.logo, imgProps.fileType, 15, 15, w, h);
+                    } catch (e) { }
+                } else {
+                    doc.setFontSize(22); doc.setTextColor(...colorAccent); doc.setFont(undefined, 'bold');
+                    doc.text("DeniDental", 15, 25);
+                }
+
+                doc.setFontSize(22); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
+                doc.text("ANEXO", 195, 25, { align: 'right' });
+                
+                doc.setFontSize(10); doc.setTextColor(...colorLight); doc.setFont(undefined, 'normal');
+                doc.text(`Factura asoc.: Nº ${invoice.series}-${invoice.number.toString().padStart(4, '0')}`, 195, 32, { align: 'right' });
+                doc.text(`Fecha: ${invDate.toLocaleDateString()}`, 195, 37, { align: 'right' });
+
+                // Datos Emisor / Cliente
+                const yInfo = 60;
+                doc.setFontSize(9); doc.setTextColor(...colorLight); doc.text("EMISOR", 15, yInfo - 5);
+                doc.setFontSize(10); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
+                const emisorName = doc.splitTextToSize(profile.fullName || 'Nombre Profesional', 85);
+                doc.text(emisorName, 15, yInfo);
+                
+                let currentYEmisor = yInfo + (emisorName.length * 5);
+                doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorLight);
+                doc.text(profile.dni || '', 15, currentYEmisor); currentYEmisor += 5;
+                doc.text(profile.address || '', 15, currentYEmisor); currentYEmisor += 5;
+                doc.text(profile.city || '', 15, currentYEmisor); currentYEmisor += 5;
+                doc.text(profile.phone || '', 15, currentYEmisor); currentYEmisor += 5;
+                if (profile.emailContact) { doc.text(profile.emailContact, 15, currentYEmisor); currentYEmisor += 5; }
+
+                doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.text("PACIENTES / CLÍNICA:", 110, yInfo - 5);
+                doc.setFontSize(11); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
+                const clientName = doc.splitTextToSize(invoice.clinicName || 'Clínica', 85);
+                doc.text(clientName, 110, yInfo);
+                let currentYClient = yInfo + (clientName.length * 5);
+                doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorLight);
+                doc.text(invoice.clinicCif || '', 110, currentYClient); currentYClient += 5;
+                const clientAddr = doc.splitTextToSize(invoice.clinicAddress || '', 85);
+                doc.text(clientAddr, 110, currentYClient); currentYClient += (clientAddr.length * 5);
+
+                const startTableY = Math.max(currentYEmisor, currentYClient) + 15;
+                
+                // Título Tabla
+                doc.setFontSize(12); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
+                doc.text("Desglose de Tratamientos Realizados", 15, startTableY - 3);
+
+                // Preparar datos tabla ordenados por fecha
+                const sortedLogs = [...logs].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                const tableData = sortedLogs.map(log => {
+                    const date = new Date(log.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                    // Base del odontólogo: El total que gana menos el extra metido (para saber lo que viene de la clínica)
+                    const baseOdont = safeNum(log.earned) - safeNum(log.extra);
+                    return [
+                        date,
+                        log.treatmentName,
+                        log.obs || '-',
+                        `${safeNum(log.price).toFixed(2)} €`,
+                        `${baseOdont.toFixed(2)} €`,
+                        `${safeNum(log.extra).toFixed(2)} €`,
+                        `${safeNum(log.earned).toFixed(2)} €`
+                    ];
+                });
+
+                doc.autoTable({
+                    startY: startTableY + 2,
+                    head: [['FECHA', 'TRATAMIENTO', 'NOTAS', 'TARIFA', 'BASE %', 'EXTRA', 'TOTAL']],
+                    body: tableData.length > 0 ? tableData : [['-', 'Sin registros detallados (Pago Fijo o sin datos)', '-', '-', '-', '-', '-']],
+                    theme: 'grid', 
+                    headStyles: { fillColor: colorAccent, textColor: 255, fontSize: 8, halign: 'center' },
+                    bodyStyles: { textColor: colorDark, fontSize: 8 },
+                    columnStyles: { 
+                        0: { cellWidth: 15, halign: 'center' },
+                        1: { cellWidth: 40 },
+                        2: { cellWidth: 45 },
+                        3: { halign: 'right', cellWidth: 20 },
+                        4: { halign: 'right', cellWidth: 20 },
+                        5: { halign: 'right', cellWidth: 20 },
+                        6: { halign: 'right', fontStyle: 'bold', cellWidth: 20 }
+                    },
+                    styles: { overflow: 'linebreak' }
+                });
+
+                // --- Totales Anexo ---
+                const finalY = doc.lastAutoTable.finalY + 15;
+                const totalGross = safeNum(invoice.amount);
+                const irpfRate = safeNum(profile.irpf);
+                const irpfAmount = totalGross * (irpfRate / 100);
+                const totalNet = totalGross - irpfAmount;
+
+                doc.setFontSize(10); doc.setTextColor(...colorLight);
+                doc.text("Total Bruto (Base Imponible)", 140, finalY, { align: 'right' });
+                doc.setTextColor(...colorDark); doc.text(`${totalGross.toFixed(2)} €`, 195, finalY, { align: 'right' });
+
+                doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(...colorDark);
+                doc.text(`Retenciones IRPF (${irpfRate}%)`, 140, finalY + 6, { align: 'right' });
+                doc.setTextColor(220, 38, 38); doc.text(`-${irpfAmount.toFixed(2)} €`, 195, finalY + 6, { align: 'right' });
+
+                doc.setDrawColor(226, 232, 240); doc.line(140, finalY + 10, 195, finalY + 10);
+
+                const totalColorHex = profile.invoiceTotalColor || "#7e22ce";
+                doc.setFontSize(14); doc.setTextColor(totalColorHex); doc.setFont(undefined, 'bold');
+                doc.text("TOTAL NETO", 140, finalY + 18, { align: 'right' });
+                doc.text(`${totalNet.toFixed(2)} €`, 195, finalY + 18, { align: 'right' });
+
+                doc.save(`Anexo_Factura_${invoice.series}${invoice.number}.pdf`);
             }
         };
 
@@ -445,7 +577,7 @@
             const generateInvoiceEntity = () => {
                 if (!filterClinicId) return alert("Selecciona una clínica.");
                 const clinic = clinics.find(c => c.id === filterClinicId);
-                // SAFEGUARD 2: Clinic Check
+                // SAFEGUARD
                 if (!clinic) return alert("Error: Clínica no válida.");
                 if (!clinic.series) return alert("Falta configurar la Serie en la clínica.");
 
@@ -458,29 +590,24 @@
                 daysTxt = uniqueDates.length > 0 ? `${uniqueDates.join(", ")}` : "";
 
                 if (clinic.paymentType === 'fixed') {
-                    // Si es fijo, intentamos sacar días de la AGENDA
+                    // Check Agenda
                     const sched = schedule.filter(s => s.clinicId === clinic.id && s.date.startsWith(month));
-                    
                     if (sched.length > 0) {
                         dCount = sched.reduce((acc, s) => acc + safeNum(s.weight), 0);
                         const schedDays = [...new Set(sched.map(s => new Date(s.date).getDate()))].sort((a,b)=>a-b);
                         daysTxt = schedDays.join(", ");
                     } else {
-                        // Fallback a logs si no hay agenda
                         dCount = uniqueDates.length;
-                        daysTxt = uniqueDates.join(", ");
                     }
                     dRate = safeNum(clinic.dailyRate);
                     totalAmount = dCount * dRate;
                 } else {
-                    // Si es porcentaje, suma de logs
                     totalAmount = unbilledLogs.reduce((sum, l) => sum + safeNum(l.earned), 0);
-                    daysTxt = uniqueDates.join(", ");
                 }
 
                 setGenData({ 
                     amount: totalAmount, 
-                    daysText: daysTxt, // Solo números: "1, 5, 20"
+                    daysText: daysTxt, // Solo números
                     daysCount: dCount, 
                     dailyRate: dRate 
                 });
@@ -505,7 +632,6 @@
                     date: invoiceDate,
                     monthStr: month,
                     clinicId: clinic.id,
-                    clinicName: clinic.name, // NVL Logic applied here implicitly via saveClinic but lets explicit
                     clinicName: clinic.businessName || clinic.name,
                     clinicCif: clinic.cif,
                     clinicAddress: clinic.address, 
@@ -560,7 +686,7 @@
                 const subject = `Factura ${inv.series}-${inv.number}`;
                 const body = template.replace('{numero}', `${inv.series}-${inv.number}`).replace('{mes}', monthName).replace('{anio}', y).replace('{clinica}', clinic.name).replace('{emisor}', profile.fullName || 'Odontólogo');
                 window.location.href = `mailto:${clinic.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                alert("Abriendo correo... Recuerda adjuntar el PDF manualmente.");
+                alert("Abriendo correo... Recuerda adjuntar los PDF manualmente.");
             };
 
             return (
@@ -598,9 +724,17 @@
                                     <div key={inv.id} className={`card p-4 border-l-4 ${inv.isPaid ? 'border-l-green-500 bg-green-50/20' : 'border-l-red-400 bg-red-50/10'}`}>
                                         <div className="flex justify-between items-center mb-2"><span className="font-bold text-lg text-gray-800">#{inv.series}-{inv.number}</span><button onClick={() => toggleInvoicePaid(inv)} className={`text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 ${inv.isPaid ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}><Icon name="DollarSign" size={14}/> {inv.isPaid ? 'COBRADA' : 'PENDIENTE'}</button></div>
                                         <div className="text-sm text-gray-600 mb-2">{inv.clinicName} - <strong>{safeNum(inv.amount).toFixed(2)}€</strong></div>
-                                        {inv.note && <div className="text-xs text-gray-500 italic mb-2">{inv.note}</div>}
                                         <div className="text-xs text-gray-500 mb-2">Emisión: {new Date(inv.date).toLocaleDateString()}</div>
-                                        <div className="flex gap-2 mt-3 justify-between"><div className="flex gap-2"><button onClick={() => PDFService.generate(profile, inv, logs.filter(l => l.invoiceId === inv.id))} className="btn btn-secondary text-xs flex-1"><Icon name="Printer" size={14}/> PDF</button><button onClick={() => sendEmail(inv)} className="btn btn-secondary text-xs text-blue-600 border-blue-200 bg-blue-50"><Icon name="Mail" size={14}/></button></div><button onClick={() => deleteInvoice(inv)} className="btn btn-danger text-xs"><Icon name="Trash2" size={14}/></button></div>
+                                        <div className="flex gap-2 mt-3 justify-between">
+                                            <div className="flex gap-2">
+                                                <button onClick={() => PDFService.generate(profile, inv, logs.filter(l => l.invoiceId === inv.id))} className="btn btn-secondary text-xs flex-1 px-2"><Icon name="Printer" size={14}/> PDF</button>
+                                                <button onClick={() => PDFService.generateAnnex(profile, inv, logs.filter(l => l.invoiceId === inv.id))} className="btn btn-secondary text-xs flex-1 px-2"><Icon name="FileText" size={14}/> Anexo</button>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => sendEmail(inv)} className="btn btn-secondary text-xs text-blue-600 border-blue-200 bg-blue-50"><Icon name="Mail" size={14}/></button>
+                                                <button onClick={() => deleteInvoice(inv)} className="btn btn-danger text-xs"><Icon name="Trash2" size={14}/></button>
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                                 {billedInvoices.length === 0 && <div className="text-center text-gray-400 text-sm py-4">No hay facturas.</div>}
@@ -751,6 +885,7 @@
             const [localProfile, setLocalProfile] = useState({
                 invoiceFooterText: '* Servicios exentos de base imponible o IVA',
                 invoiceTotalColor: '#7e22ce',
+                emailContact: '',
                 ...profile
             });
             const [clinicForm, setClinicForm] = useState({ id: null, name: '', businessName: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' });
@@ -903,8 +1038,12 @@
                             <Input label="Nombre" value={localProfile.fullName || ''} onChange={e => setLocalProfile({...localProfile, fullName: e.target.value})} />
                             <Input label="NIF" value={localProfile.dni || ''} onChange={e => setLocalProfile({...localProfile, dni: e.target.value})} />
                             <Input label="Dirección" value={localProfile.address || ''} onChange={e => setLocalProfile({...localProfile, address: e.target.value})} />
-                            <div className="grid grid-cols-2 gap-2"><Input label="CP/Ciudad" value={localProfile.city || ''} onChange={e => setLocalProfile({...localProfile, city: e.target.value})} /><Input label="% IRPF" value={localProfile.irpf || ''} onChange={e => setLocalProfile({...localProfile, irpf: e.target.value})} /></div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Input label="CP/Ciudad" value={localProfile.city || ''} onChange={e => setLocalProfile({...localProfile, city: e.target.value})} />
+                                <Input label="% IRPF" value={localProfile.irpf || ''} onChange={e => setLocalProfile({...localProfile, irpf: e.target.value})} />
+                            </div>
                             <Input label="IBAN" value={localProfile.iban || ''} onChange={e => setLocalProfile({...localProfile, iban: e.target.value})} />
+                            <Input label="Email de Contacto" type="email" value={localProfile.emailContact || ''} onChange={e => setLocalProfile({...localProfile, emailContact: e.target.value})} />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t pt-4 border-gray-100">
                             <Input label="Texto pie de factura (*)" value={localProfile.invoiceFooterText} onChange={e => setLocalProfile({...localProfile, invoiceFooterText: e.target.value})} />
@@ -1000,13 +1139,6 @@
                 setProfile(newProfile);
                 alert("Perfil guardado correctamente.");
             };
-
-            // Login check - simple protection
-            const checkLogin = () => {
-                const pass = prompt("Introduce código de acceso:");
-                if (pass === "36202") setIsAuthenticated(true);
-                else alert("Código incorrecto.");
-            };
             
             // Auto-login if previously logged in (session storage)
             useEffect(() => {
@@ -1022,7 +1154,7 @@
             return (
                 <div className="min-h-screen pb-20">
                     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
-                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v9.6</span></div></div>
+                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v10.2</span></div></div>
                     </header>
                     <div className="p-4 md:p-8">
                         {view === 'register' && <RegisterView clinics={clinics} treatments={treatments} tariffs={tariffs} addLog={addLog} updateTariffMaster={updateTariffMaster} />}

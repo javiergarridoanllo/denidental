@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DeniDental Pro - Gestión v10.3</title>
+    <title>DeniDental Pro - Gestión v10.4 (Minimums & Schedule Fix)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
     
     <!-- LIBRERÍAS -->
@@ -72,6 +72,7 @@
             ArrowRight: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>,
             Lock: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
             File: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+            FileText: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,
             Share: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
         };
 
@@ -169,7 +170,6 @@
                 
                 doc.setFontSize(10); doc.setTextColor(...colorLight); doc.setFont(undefined, 'normal');
                 doc.text(`Nº ${invoice.series}-${invoice.number.toString().padStart(4, '0')}`, 195, 32, { align: 'right' });
-                // Aplicamos el formato seleccionado
                 doc.text(`Fecha: ${formatDateForm(invoice.date, dateFormat)}`, 195, 37, { align: 'right' });
 
                 const yInfo = 60;
@@ -230,7 +230,6 @@
                 doc.text("Base Imponible", 140, finalY, { align: 'right' });
                 doc.setTextColor(...colorDark); doc.text(`${totalGross.toFixed(2)} €`, 195, finalY, { align: 'right' });
 
-                // Footer Personalizado
                 doc.setFontSize(8); doc.setTextColor(...colorLight); doc.setFont(undefined, 'italic');
                 const footerText = profile.invoiceFooterText || "* Servicios exentos de base imponible o IVA";
                 doc.text(footerText, 15, finalY + 5);
@@ -241,7 +240,6 @@
 
                 doc.setDrawColor(226, 232, 240); doc.line(140, finalY + 10, 195, finalY + 10);
 
-                // Color Personalizado Total
                 const totalColorHex = profile.invoiceTotalColor || "#7e22ce";
                 doc.setFontSize(14); doc.setTextColor(totalColorHex); doc.setFont(undefined, 'bold');
                 doc.text("TOTAL A PERCIBIR", 140, finalY + 18, { align: 'right' });
@@ -317,16 +315,13 @@
 
                 const startTableY = Math.max(currentYEmisor, currentYClient) + 15;
                 
-                // Título Tabla
                 doc.setFontSize(12); doc.setTextColor(...colorDark); doc.setFont(undefined, 'bold');
                 doc.text("Desglose de Tratamientos Realizados", 15, startTableY - 3);
 
-                // Preparar datos tabla ordenados por fecha
                 const sortedLogs = [...logs].sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 const tableData = sortedLogs.map(log => {
                     const date = new Date(log.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-                    // Base del odontólogo: El total que gana menos el extra metido
                     const baseOdont = safeNum(log.earned) - safeNum(log.extra);
                     return [
                         date,
@@ -358,7 +353,7 @@
                     styles: { overflow: 'linebreak' }
                 });
 
-                // --- Totales Anexo ---
+                // Totales Anexo
                 const finalY = doc.lastAutoTable.finalY + 15;
                 const totalGross = safeNum(invoice.amount);
                 const irpfRate = safeNum(profile.irpf);
@@ -450,8 +445,12 @@
                 const base = safeNum(form.price);
                 const dto = safeNum(form.discount);
                 const extra = safeNum(form.extra);
-                const percentageToUse = clinic.paymentType === 'fixed' ? (safeNum(clinic.theoreticalPercentage)) : (safeNum(clinic.percentage));
+                
+                // Los modelos de mínimos o fijos se evalúan a posteriori. 
+                // Aquí en el log imputamos con el % acordado o teórico para tener un valor base trazable.
+                const percentageToUse = clinic.paymentType === 'percent' ? safeNum(clinic.percentage) : safeNum(clinic.theoreticalPercentage);
                 const earned = (base * (1 - dto/100) * (percentageToUse/100)) + extra;
+                
                 addLog({ ...form, earned, clinicName: clinic.name, treatmentName: tName });
                 updateTariffMaster(form.clinicId, form.treatmentId, form.price, form.discount);
                 setForm(prev => ({ ...prev, treatmentId: '', price: '', discount: '0', extra: '', obs: '' }));
@@ -597,27 +596,44 @@
                 if (!clinic) return alert("Error: Clínica no válida.");
                 if (!clinic.series) return alert("Falta configurar la Serie en la clínica.");
 
-                let totalAmount = 0;
-                let daysTxt = "";
+                // --- NUEVA LÓGICA DE CÁLCULO CUBRIENDO MÍNIMOS (DIARIO/MENSUAL) ---
                 let dCount = 0;
-                let dRate = 0;
+                let daysTxt = "";
+                let dRate = safeNum(clinic.dailyRate);
+
+                const loggedDates = [...new Set(unbilledLogs.map(l => l.date))];
+                const sched = schedule.filter(s => s.clinicId === clinic.id && s.date.startsWith(month));
                 
-                const uniqueDates = [...new Set(unbilledLogs.map(l => new Date(l.date).getDate()))].sort((a,b)=>a-b);
-                daysTxt = uniqueDates.length > 0 ? `${uniqueDates.join(", ")}` : "";
+                // Unión de fechas (Agenda + Tratamientos reales)
+                const allDates = [...new Set([...sched.map(s => s.date), ...loggedDates])].sort();
+                
+                daysTxt = allDates.map(d => new Date(d).getDate()).join(", ");
+                
+                dCount = allDates.reduce((acc, dateStr) => {
+                    const sEntry = sched.find(s => s.date === dateStr);
+                    return acc + (sEntry ? safeNum(sEntry.weight) : 1);
+                }, 0);
+
+                const totalProduced = unbilledLogs.reduce((sum, l) => sum + safeNum(l.earned), 0);
+                let totalAmount = 0;
 
                 if (clinic.paymentType === 'fixed') {
-                    const sched = schedule.filter(s => s.clinicId === clinic.id && s.date.startsWith(month));
-                    if (sched.length > 0) {
-                        dCount = sched.reduce((acc, s) => acc + safeNum(s.weight), 0);
-                        const schedDays = [...new Set(sched.map(s => new Date(s.date).getDate()))].sort((a,b)=>a-b);
-                        daysTxt = schedDays.join(", ");
-                    } else {
-                        dCount = uniqueDates.length;
-                    }
-                    dRate = safeNum(clinic.dailyRate);
                     totalAmount = dCount * dRate;
+                } else if (clinic.paymentType === 'min_diario') {
+                    let total = 0;
+                    allDates.forEach(dateStr => {
+                        const sEntry = sched.find(s => s.date === dateStr);
+                        const weight = sEntry ? safeNum(sEntry.weight) : 1;
+                        const dailyProduced = unbilledLogs.filter(l => l.date === dateStr).reduce((sum, l) => sum + safeNum(l.earned), 0);
+                        const dailyMin = dRate * weight;
+                        total += Math.max(dailyProduced, dailyMin);
+                    });
+                    totalAmount = total;
+                } else if (clinic.paymentType === 'min_mensual') {
+                    const totalMin = dCount * dRate;
+                    totalAmount = Math.max(totalProduced, totalMin);
                 } else {
-                    totalAmount = unbilledLogs.reduce((sum, l) => sum + safeNum(l.earned), 0);
+                    totalAmount = totalProduced;
                 }
 
                 setGenData({ 
@@ -761,7 +777,16 @@
                         <Modal title="Generar Factura" onClose={() => setShowGenModal(false)}>
                             <div className="space-y-4">
                                 <Input type="date" label="Fecha Emisión" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
-                                {clinics.find(c => c.id === filterClinicId)?.paymentType === 'fixed' && (<div className="bg-blue-50 p-3 rounded border border-blue-100"><label className="block text-xs font-bold text-blue-700 uppercase mb-2">Cálculo Fijo</label><div className="grid grid-cols-2 gap-2"><Input label="Días" type="number" value={genData.daysCount} onChange={e => { const d = safeNum(e.target.value); setGenData({...genData, daysCount: d, amount: d * genData.dailyRate}); }} /><Input label="Precio/Día" type="number" value={genData.dailyRate} disabled /></div></div>)}
+                                <div className="bg-blue-50 p-3 rounded border border-blue-100">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Input label="Días Computados" type="number" value={genData.daysCount} disabled />
+                                        <Input label="Mín/Fijo Diario" type="number" value={genData.dailyRate} disabled />
+                                    </div>
+                                    <p className="text-[10px] text-blue-600 mt-1">
+                                        {clinics.find(c=>c.id===filterClinicId)?.paymentType === 'min_diario' && "Se ha aplicado el mínimo diario a los días con baja producción."}
+                                        {clinics.find(c=>c.id===filterClinicId)?.paymentType === 'min_mensual' && "Se ha evaluado la producción vs el mínimo mensual prorrateado."}
+                                    </p>
+                                </div>
                                 <Input label="Importe Total (Editable)" type="number" value={genData.amount} onChange={e => setGenData({...genData, amount: e.target.value})} />
                                 <Input label="Texto Días (PDF)" value={genData.daysText} onChange={e => setGenData({...genData, daysText: e.target.value})} />
                                 <div className="flex justify-end gap-2 pt-2"><button onClick={() => setShowGenModal(false)} className="btn btn-secondary">Cancelar</button><button onClick={confirmGenerate} className="btn btn-primary">Confirmar y Generar</button></div>
@@ -805,21 +830,38 @@
             const statsByClinic = clinics.map(c => {
                 let generated = 0;
                 const cLogs = fLogs.filter(l => l.clinicId === c.id);
+                
+                const loggedDates = [...new Set(cLogs.map(l => l.date))];
+                const cSched = reportType === 'monthly' 
+                    ? schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedMonth))
+                    : schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedYear));
+                
+                const allDates = [...new Set([...cSched.map(s => s.date), ...loggedDates])];
+                const dCount = allDates.reduce((acc, dateStr) => {
+                    const sEntry = cSched.find(s => s.date === dateStr);
+                    return acc + (sEntry ? safeNum(sEntry.weight) : 1);
+                }, 0);
+                
+                const dRate = safeNum(c.dailyRate);
+                const totalProduced = cLogs.reduce((sum, l) => sum + safeNum(l.earned), 0);
 
                 if (c.paymentType === 'fixed') {
-                     // Check Agenda first for accurate days
-                     let cSched = [];
-                     if (reportType === 'monthly') cSched = schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedMonth));
-                     else cSched = schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedYear));
-                     
-                     if (cSched.length > 0) {
-                        generated = cSched.reduce((sum, s) => sum + (s.weight * (safeNum(c.dailyRate))), 0);
-                     } else {
-                        const uniqueDays = new Set(cLogs.map(l => l.date)).size;
-                        generated = uniqueDays * (safeNum(c.dailyRate));
-                     }
+                     generated = dCount * dRate;
+                } else if (c.paymentType === 'min_diario') {
+                     let total = 0;
+                     allDates.forEach(dateStr => {
+                         const sEntry = cSched.find(s => s.date === dateStr);
+                         const weight = sEntry ? safeNum(sEntry.weight) : 1;
+                         const dailyProduced = cLogs.filter(l => l.date === dateStr).reduce((sum, l) => sum + safeNum(l.earned), 0);
+                         const dailyMin = dRate * weight;
+                         total += Math.max(dailyProduced, dailyMin);
+                     });
+                     generated = total;
+                } else if (c.paymentType === 'min_mensual') {
+                     const totalMin = dCount * dRate;
+                     generated = Math.max(totalProduced, totalMin);
                 } else {
-                     generated = cLogs.reduce((sum, l) => sum + safeNum(l.earned), 0);
+                     generated = totalProduced;
                 }
                 
                 const cInvs = fInvs.filter(i => i.clinicId === c.id);
@@ -827,7 +869,7 @@
 
                 return { 
                     name: c.name, 
-                    type: c.paymentType === 'fixed' ? 'Fijo' : '%',
+                    type: c.paymentType === 'fixed' ? 'Fijo' : c.paymentType === 'min_diario' ? 'Mín. Diario' : c.paymentType === 'min_mensual' ? 'Mín. Mensual' : '%',
                     generated: generated,
                     invoiced: invoiced
                 };
@@ -897,7 +939,7 @@
             );
         };
 
-        const SettingsView = ({ profile, onSaveProfile, clinics, setClinics, treatments, setTreatments, tariffs, logs, setLogs, invoices, setInvoices }) => {
+        const SettingsView = ({ profile, onSaveProfile, clinics, setClinics, treatments, setTreatments, tariffs, logs, setLogs, invoices, setInvoices, schedule, setSchedule }) => {
             const [localProfile, setLocalProfile] = useState({
                 invoiceFooterText: '* Servicios exentos de base imponible o IVA',
                 invoiceTotalColor: '#7e22ce',
@@ -951,7 +993,8 @@
             const addT = () => { if(!newTreat) return; setTreatments([...treatments, { id: DB.uuid(), name: newTreat }]); setNewTreat(''); };
             
             const handleDownloadBackup = () => {
-                const data = { profile, clinics, treatments, logs, tariffs, invoices, schedule: DB.get('schedule', []) };
+                // FIXED: Se envía correctamente el schedule desde los props
+                const data = { profile, clinics, treatments, logs, tariffs, invoices, schedule };
                 const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -975,7 +1018,7 @@
                                 if(data.logs) setLogs(data.logs);
                                 if(data.tariffs) DB.set('tariffs', data.tariffs);
                                 if(data.invoices) setInvoices(data.invoices);
-                                if(data.schedule) DB.set('schedule', data.schedule);
+                                if(data.schedule !== undefined) setSchedule(data.schedule);
                                 alert("Copia restaurada con éxito.");
                                 window.location.reload();
                             } catch (quotaError) {
@@ -989,7 +1032,7 @@
                                         if(data.logs) setLogs(data.logs);
                                         if(data.tariffs) DB.set('tariffs', data.tariffs);
                                         if(data.invoices) setInvoices(data.invoices);
-                                        if(data.schedule) DB.set('schedule', data.schedule);
+                                        if(data.schedule !== undefined) setSchedule(data.schedule);
                                         alert("Restaurado parcialmente (sin logo).");
                                         window.location.reload();
                                     }
@@ -1002,7 +1045,8 @@
             };
             
             const handleShareBackup = async () => {
-                const data = { profile, clinics, treatments, logs, tariffs, invoices, schedule: DB.get('schedule', []) };
+                // FIXED: Se envía correctamente el schedule desde los props
+                const data = { profile, clinics, treatments, logs, tariffs, invoices, schedule };
                 const jsonStr = JSON.stringify(data);
                 try {
                     const blob = new Blob([jsonStr], {type: 'application/json'});
@@ -1031,7 +1075,7 @@
                             if(data.logs) setLogs(data.logs);
                             if(data.tariffs) DB.set('tariffs', data.tariffs);
                             if(data.invoices) setInvoices(data.invoices);
-                            if(data.schedule) DB.set('schedule', data.schedule);
+                            if(data.schedule !== undefined) setSchedule(data.schedule);
                             alert("Restaurado.");
                             window.location.reload();
                         }
@@ -1070,19 +1114,13 @@
                             <Input label="IBAN" value={localProfile.iban || ''} onChange={e => setLocalProfile({...localProfile, iban: e.target.value})} />
                             <Input label="Email de Contacto" type="email" value={localProfile.emailContact || ''} onChange={e => setLocalProfile({...localProfile, emailContact: e.target.value})} />
                             
-                            {/* --- NUEVO: SELECTOR DE FECHA --- */}
                             <div className="mb-3 w-full">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Formato de Fecha (Facturas)</label>
-                                <select 
-                                    className="input-field" 
-                                    value={localProfile.invoiceDateFormat || 'DD/MM/YYYY'} 
-                                    onChange={e => setLocalProfile({...localProfile, invoiceDateFormat: e.target.value})}
-                                >
+                                <select className="input-field" value={localProfile.invoiceDateFormat || 'DD/MM/YYYY'} onChange={e => setLocalProfile({...localProfile, invoiceDateFormat: e.target.value})}>
                                     {formatOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 </select>
                                 <p className="text-xs text-gray-500 mt-1">Ejemplo hoy: <strong className="text-purple-600">{formatDateForm(new Date(), localProfile.invoiceDateFormat || 'DD/MM/YYYY')}</strong></p>
                             </div>
-
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t pt-4 border-gray-100">
                             <Input label="Texto pie de factura (*)" value={localProfile.invoiceFooterText} onChange={e => setLocalProfile({...localProfile, invoiceFooterText: e.target.value})} />
@@ -1116,16 +1154,30 @@
                                 <Input placeholder="Razón Social (Para Factura)" value={clinicForm.businessName} onChange={e => setClinicForm({...clinicForm, businessName: e.target.value})} />
                                 <Input placeholder="Email" type="email" value={clinicForm.email} onChange={e => setClinicForm({...clinicForm, email: e.target.value})} />
                                 <div className="mb-2">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Modelo de Cobro</label>
-                                    <div className="flex gap-4 text-sm"><label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="payType" checked={clinicForm.paymentType === 'percent'} onChange={() => setClinicForm({...clinicForm, paymentType: 'percent'})} /> Porcentaje</label><label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="payType" checked={clinicForm.paymentType === 'fixed'} onChange={() => setClinicForm({...clinicForm, paymentType: 'fixed'})} /> Fijo Diario</label></div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Modelo de Cobro</label>
+                                    <div className="flex gap-3 text-xs flex-wrap">
+                                        <label className="flex items-center gap-1 cursor-pointer"><input type="radio" name="payType" checked={clinicForm.paymentType === 'percent'} onChange={() => setClinicForm({...clinicForm, paymentType: 'percent'})} /> %</label>
+                                        <label className="flex items-center gap-1 cursor-pointer"><input type="radio" name="payType" checked={clinicForm.paymentType === 'fixed'} onChange={() => setClinicForm({...clinicForm, paymentType: 'fixed'})} /> Fijo</label>
+                                        <label className="flex items-center gap-1 cursor-pointer"><input type="radio" name="payType" checked={clinicForm.paymentType === 'min_diario'} onChange={() => setClinicForm({...clinicForm, paymentType: 'min_diario'})} /> Mín. Diario</label>
+                                        <label className="flex items-center gap-1 cursor-pointer"><input type="radio" name="payType" checked={clinicForm.paymentType === 'min_mensual'} onChange={() => setClinicForm({...clinicForm, paymentType: 'min_mensual'})} /> Mín. Mensual</label>
+                                    </div>
                                 </div>
-                                {clinicForm.paymentType === 'percent' ? (<Input label="Porcentaje Acordado (%)" placeholder="%" type="number" value={clinicForm.percentage} onChange={e => setClinicForm({...clinicForm, percentage: e.target.value})} />) : (<div className="grid grid-cols-2 gap-2"><Input label="Fijo Diario (€)" placeholder="€" type="number" value={clinicForm.dailyRate} onChange={e => setClinicForm({...clinicForm, dailyRate: e.target.value})} /><Input label="% Teórico" placeholder="%" type="number" value={clinicForm.theoreticalPercentage} onChange={e => setClinicForm({...clinicForm, theoreticalPercentage: e.target.value})} /></div>)}
+                                {clinicForm.paymentType === 'percent' && (
+                                    <Input label="Porcentaje Acordado (%)" type="number" value={clinicForm.percentage} onChange={e => setClinicForm({...clinicForm, percentage: e.target.value})} />
+                                )}
+                                {clinicForm.paymentType === 'fixed' && (
+                                    <div className="grid grid-cols-2 gap-2"><Input label="Fijo Diario (€)" type="number" value={clinicForm.dailyRate} onChange={e => setClinicForm({...clinicForm, dailyRate: e.target.value})} /><Input label="% Teórico (Imputaciones)" type="number" value={clinicForm.theoreticalPercentage} onChange={e => setClinicForm({...clinicForm, theoreticalPercentage: e.target.value})} /></div>
+                                )}
+                                {(clinicForm.paymentType === 'min_diario' || clinicForm.paymentType === 'min_mensual') && (
+                                    <div className="grid grid-cols-2 gap-2"><Input label="Porcentaje (%)" type="number" value={clinicForm.percentage} onChange={e => setClinicForm({...clinicForm, percentage: e.target.value})} /><Input label="Mínimo Diario (€)" type="number" value={clinicForm.dailyRate} onChange={e => setClinicForm({...clinicForm, dailyRate: e.target.value})} /></div>
+                                )}
+                                
                                 <div className="flex gap-2"><Input label="Serie Fac." placeholder="Ej: A" value={clinicForm.series} onChange={e => setClinicForm({...clinicForm, series: e.target.value})} /><Input label="CIF" placeholder="CIF" value={clinicForm.cif} onChange={e => setClinicForm({...clinicForm, cif: e.target.value})} /></div>
                                 <Input placeholder="Dirección" value={clinicForm.address} onChange={e => setClinicForm({...clinicForm, address: e.target.value})} />
                                 <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer"><input type="checkbox" checked={clinicForm.active !== false} onChange={e => setClinicForm({...clinicForm, active: e.target.checked})} /> Clínica Activa</label>
                                 <div className="flex gap-2 pt-2">{clinicForm.id && <button onClick={() => setClinicForm({ id: null, name: '', businessName: '', email: '', percentage: '', cif: '', address: '', series: '', active: true, paymentType: 'percent', dailyRate: '', theoreticalPercentage: '' })} className="btn btn-secondary w-full text-sm">Cancelar</button>}<button onClick={saveClinic} className="btn btn-secondary w-full text-sm">{clinicForm.id ? 'Actualizar' : 'Añadir'}</button></div>
                             </div>
-                            <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">{clinics.map(c => (<li key={c.id} className={`flex justify-between p-2 border-b ${c.active === false ? 'bg-gray-100 text-gray-400' : ''}`}><div className="flex flex-col"><span>{c.name} {c.active === false && '(Inactiva)'}</span><span className="text-xs text-gray-500">{c.paymentType === 'fixed' ? `Fijo: ${c.dailyRate}€/día` : `${c.percentage}%`} - Serie: {c.series}</span></div><button onClick={() => editClinic(c)} className="text-blue-500 hover:text-blue-700"><Icon name="Edit3" size={14}/></button></li>))}</ul>
+                            <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">{clinics.map(c => (<li key={c.id} className={`flex justify-between p-2 border-b ${c.active === false ? 'bg-gray-100 text-gray-400' : ''}`}><div className="flex flex-col"><span>{c.name} {c.active === false && '(Inactiva)'}</span><span className="text-xs text-gray-500">{c.paymentType === 'fixed' ? `Fijo: ${c.dailyRate}€/día` : c.paymentType === 'min_diario' ? `${c.percentage}% (Mín: ${c.dailyRate}€/día)` : c.paymentType === 'min_mensual' ? `${c.percentage}% (Mín Mensual: ${c.dailyRate}€/día)` : `${c.percentage}%`} - Serie: {c.series}</span></div><button onClick={() => editClinic(c)} className="text-blue-500 hover:text-blue-700"><Icon name="Edit3" size={14}/></button></li>))}</ul>
                         </div>
                         <div className="card p-6">
                             <h3 className="font-bold mb-4">Tratamientos</h3>
@@ -1178,8 +1230,14 @@
                 setProfile(newProfile);
                 alert("Perfil guardado correctamente.");
             };
+
+            // Login check
+            const checkLogin = () => {
+                const pass = prompt("Introduce código de acceso:");
+                if (pass === "36202") setIsAuthenticated(true);
+                else alert("Código incorrecto.");
+            };
             
-            // Auto-login if previously logged in (session storage)
             useEffect(() => {
                 if (sessionStorage.getItem('deni_auth') === 'true') setIsAuthenticated(true);
             }, []);
@@ -1193,14 +1251,14 @@
             return (
                 <div className="min-h-screen pb-20">
                     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
-                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v10.3</span></div></div>
+                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v10.4</span></div></div>
                     </header>
                     <div className="p-4 md:p-8">
                         {view === 'register' && <RegisterView clinics={clinics} treatments={treatments} tariffs={tariffs} addLog={addLog} updateTariffMaster={updateTariffMaster} />}
                         {view === 'history' && <InvoiceFlowView logs={logs} invoices={invoices} clinics={clinics} treatments={treatments} setLogs={setLogs} setInvoices={setInvoices} profile={profile} updateTariffMaster={updateTariffMaster} schedule={schedule}/>}
                         {view === 'agenda' && <CalendarView schedule={schedule} setSchedule={setSchedule} clinics={clinics} />}
                         {view === 'reports' && <ReportsView logs={logs} clinics={clinics} invoices={invoices} schedule={schedule} />}
-                        {view === 'settings' && <SettingsView profile={profile} onSaveProfile={handleSaveProfile} clinics={clinics} setClinics={setClinics} treatments={treatments} setTreatments={setTreatments} tariffs={tariffs} logs={logs} setLogs={setLogs} invoices={invoices} setInvoices={setInvoices} />}
+                        {view === 'settings' && <SettingsView profile={profile} onSaveProfile={handleSaveProfile} clinics={clinics} setClinics={setClinics} treatments={treatments} setTreatments={setTreatments} tariffs={tariffs} logs={logs} setLogs={setLogs} invoices={invoices} setInvoices={setInvoices} schedule={schedule} setSchedule={setSchedule} />}
                     </div>
                     <nav className="fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around p-2 z-50 md:justify-center md:gap-4 pb-safe">
                         <button onClick={() => setView('register')} className={`flex flex-col items-center p-2 rounded-lg transition-colors ${view === 'register' ? 'text-purple-600' : 'text-gray-400 hover:bg-gray-50'}`}><Icon name="Edit3" size={20} /><span className="text-[9px] font-bold mt-1">TRATAMIENTOS</span></button>

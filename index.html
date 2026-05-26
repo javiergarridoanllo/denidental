@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DeniDental Pro v10.4</title>
+    <title>DeniDental Pro - Gestión v10.5 </title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
     
     <!-- LIBRERÍAS -->
@@ -446,9 +446,8 @@
                 const dto = safeNum(form.discount);
                 const extra = safeNum(form.extra);
                 
-                // Los modelos de mínimos o fijos se evalúan a posteriori. 
-                // Aquí en el log imputamos con el % acordado o teórico para tener un valor base trazable.
-                const percentageToUse = clinic.paymentType === 'percent' ? safeNum(clinic.percentage) : safeNum(clinic.theoreticalPercentage);
+                // BUGFIX: Usar percentage y no theoreticalPercentage para los mínimos
+                const percentageToUse = clinic.paymentType === 'fixed' ? safeNum(clinic.theoreticalPercentage) : safeNum(clinic.percentage);
                 const earned = (base * (1 - dto/100) * (percentageToUse/100)) + extra;
                 
                 addLog({ ...form, earned, clinicName: clinic.name, treatmentName: tName });
@@ -596,7 +595,7 @@
                 if (!clinic) return alert("Error: Clínica no válida.");
                 if (!clinic.series) return alert("Falta configurar la Serie en la clínica.");
 
-                // --- NUEVA LÓGICA DE CÁLCULO CUBRIENDO MÍNIMOS (DIARIO/MENSUAL) ---
+                // --- LÓGICA DE CÁLCULO CUBRIENDO MÍNIMOS (DIARIO/MENSUAL) ---
                 let dCount = 0;
                 let daysTxt = "";
                 let dRate = safeNum(clinic.dailyRate);
@@ -696,7 +695,8 @@
                 const base = safeNum(editingLog.price);
                 const dto = safeNum(editingLog.discount);
                 const extra = safeNum(editingLog.extra);
-                const percentageToUse = clinic.paymentType === 'fixed' ? (safeNum(clinic.theoreticalPercentage)) : (safeNum(clinic.percentage));
+                // BUGFIX en edición: 
+                const percentageToUse = clinic.paymentType === 'fixed' ? safeNum(clinic.theoreticalPercentage) : safeNum(clinic.percentage);
                 const earned = (base * (1 - dto/100) * (percentageToUse/100)) + extra;
                 setLogs(logs.map(l => l.id === editingLog.id ? { ...editingLog, earned, treatmentName: tName } : l));
                 updateTariffMaster(editingLog.clinicId, editingLog.treatmentId, editingLog.price, editingLog.discount);
@@ -810,11 +810,16 @@
 
         const ReportsView = ({ logs, clinics, invoices, schedule }) => {
             const [reportType, setReportType] = useState('monthly'); 
+            const [selectedDay, setSelectedDay] = useState(new Date().toISOString().split('T')[0]);
             const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
             const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
             const getFilteredData = () => {
-                if (reportType === 'monthly') {
+                if (reportType === 'daily') {
+                    const fLogs = logs.filter(l => l.date === selectedDay);
+                    const fInvs = invoices.filter(i => i.date === selectedDay);
+                    return { fLogs, fInvs, title: `Informe Diario (${new Date(selectedDay).toLocaleDateString('es-ES')})` };
+                } else if (reportType === 'monthly') {
                     const fLogs = logs.filter(l => l.date.startsWith(selectedMonth));
                     const fInvs = invoices.filter(i => i.monthStr === selectedMonth);
                     return { fLogs, fInvs, title: `Informe Mensual (${selectedMonth})` };
@@ -827,14 +832,19 @@
 
             const { fLogs, fInvs, title } = getFilteredData();
 
-            const statsByClinic = clinics.map(c => {
+            const statsByClinicRaw = clinics.map(c => {
                 let generated = 0;
                 const cLogs = fLogs.filter(l => l.clinicId === c.id);
                 
                 const loggedDates = [...new Set(cLogs.map(l => l.date))];
-                const cSched = reportType === 'monthly' 
-                    ? schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedMonth))
-                    : schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedYear));
+                let cSched = [];
+                if (reportType === 'daily') {
+                    cSched = schedule.filter(s => s.clinicId === c.id && s.date === selectedDay);
+                } else if (reportType === 'monthly') {
+                    cSched = schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedMonth));
+                } else {
+                    cSched = schedule.filter(s => s.clinicId === c.id && s.date.startsWith(selectedYear));
+                }
                 
                 const allDates = [...new Set([...cSched.map(s => s.date), ...loggedDates])];
                 const dCount = allDates.reduce((acc, dateStr) => {
@@ -874,6 +884,9 @@
                     invoiced: invoiced
                 };
             });
+
+            // FIX: Ocultar clínicas sin actividad (0 generado y 0 facturado)
+            const statsByClinic = statsByClinicRaw.filter(stat => stat.generated > 0 || stat.invoiced > 0);
             
             const treatmentCounts = {};
             const treatmentAmount = {};
@@ -888,7 +901,6 @@
                 .slice(0, 5)
                 .map(([name, count]) => ({ name, count, amount: treatmentAmount[name] }));
 
-            // Totales Generales
             const grandTotalGenerated = statsByClinic.reduce((acc, curr) => acc + curr.generated, 0);
             const grandTotalInvoiced = statsByClinic.reduce((acc, curr) => acc + curr.invoiced, 0);
             const grandTotalPending = grandTotalGenerated - grandTotalInvoiced;
@@ -897,11 +909,18 @@
                 <div className="max-w-5xl mx-auto space-y-8 fade-in pb-20 p-4">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Icon name="Activity" className="text-purple-600"/> {title}</h2>
-                        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm"><button onClick={() => setReportType('monthly')} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${reportType === 'monthly' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Mensual</button><button onClick={() => setReportType('annual')} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${reportType === 'annual' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Anual</button></div>
-                        <div className="w-full md:w-auto">{reportType === 'monthly' ? (<Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} />) : (<select className="input-field w-32" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option></select>)}</div>
+                        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto w-full md:w-auto">
+                            <button onClick={() => setReportType('daily')} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${reportType === 'daily' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Diario</button>
+                            <button onClick={() => setReportType('monthly')} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${reportType === 'monthly' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Mensual</button>
+                            <button onClick={() => setReportType('annual')} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${reportType === 'annual' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Anual</button>
+                        </div>
+                        <div className="w-full md:w-auto">
+                            {reportType === 'daily' ? (<Input type="date" value={selectedDay} onChange={e => setSelectedDay(e.target.value)} />) : 
+                             reportType === 'monthly' ? (<Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} />) : 
+                             (<select className="input-field w-32" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option></select>)}
+                        </div>
                     </div>
                     
-                    {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                          <div className="card p-4 border-l-4 border-purple-500">
                             <div className="text-xs text-gray-500 uppercase font-bold mb-1">Total Generado</div>
@@ -923,18 +942,23 @@
                             <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-xs"><tr><th className="p-3">Clínica</th><th className="p-3">Tipo</th><th className="p-3 text-right">Generado</th><th className="p-3 text-right">Facturado</th><th className="p-3 text-right">Pendiente</th></tr></thead>
                             <tbody className="divide-y divide-gray-100">
                                 {statsByClinic.map(stat => { const diff = stat.generated - stat.invoiced; return (<tr key={stat.name} className="hover:bg-gray-50"><td className="p-3 font-medium">{stat.name}</td><td className="p-3"><span className="text-xs bg-gray-100 px-2 py-1 rounded">{stat.type}</span></td><td className="p-3 text-right">{stat.generated.toFixed(2)}€</td><td className="p-3 text-right font-bold">{stat.invoiced.toFixed(2)}€</td><td className={`p-3 text-right font-bold ${diff > 1 ? 'text-red-500' : 'text-green-600'}`}>{diff.toFixed(2)}€</td></tr>) })}
-                                {/* Total Row */}
-                                <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
-                                    <td className="p-3" colSpan="2">TOTAL</td>
-                                    <td className="p-3 text-right">{grandTotalGenerated.toFixed(2)}€</td>
-                                    <td className="p-3 text-right">{grandTotalInvoiced.toFixed(2)}€</td>
-                                    <td className="p-3 text-right">{grandTotalPending.toFixed(2)}€</td>
-                                </tr>
+                                {statsByClinic.length === 0 && <tr><td colSpan="5" className="p-4 text-center text-gray-400 italic">No hay actividad registrada en este periodo.</td></tr>}
+                                {statsByClinic.length > 0 && (
+                                    <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
+                                        <td className="p-3" colSpan="2">TOTAL</td>
+                                        <td className="p-3 text-right">{grandTotalGenerated.toFixed(2)}€</td>
+                                        <td className="p-3 text-right">{grandTotalInvoiced.toFixed(2)}€</td>
+                                        <td className="p-3 text-right">{grandTotalPending.toFixed(2)}€</td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div></div>
                     
-                    <div className="card p-6"><h3 className="font-bold text-lg mb-4 text-gray-700">Top 5 Tratamientos (por Importe)</h3><div className="space-y-3">{topTreatments.map((t, idx) => (<div key={t.name} className="flex items-center gap-3"><span className="text-gray-400 font-mono w-4 font-bold">{idx + 1}.</span><div className="flex-1"><div className="flex justify-between text-sm mb-1"><span className="font-medium text-gray-700">{t.name}</span><div className="text-right"><span className="text-gray-900 font-bold block">{t.amount.toFixed(2)}€</span><span className="text-gray-500 text-xs">{t.count} uds.</span></div></div><div className="bar-container"><div className="bar-fill bg-purple-500" style={{ width: `${(t.amount / (topTreatments[0].amount || 1)) * 100}%` }}></div></div></div></div>))}</div></div>
+                    <div className="card p-6"><h3 className="font-bold text-lg mb-4 text-gray-700">Top 5 Tratamientos (por Importe)</h3><div className="space-y-3">
+                        {topTreatments.length === 0 && <p className="text-gray-400 italic text-sm">No hay tratamientos registrados.</p>}
+                        {topTreatments.map((t, idx) => (<div key={t.name} className="flex items-center gap-3"><span className="text-gray-400 font-mono w-4 font-bold">{idx + 1}.</span><div className="flex-1"><div className="flex justify-between text-sm mb-1"><span className="font-medium text-gray-700">{t.name}</span><div className="text-right"><span className="text-gray-900 font-bold block">{t.amount.toFixed(2)}€</span><span className="text-gray-500 text-xs">{t.count} uds.</span></div></div><div className="bar-container"><div className="bar-fill bg-purple-500" style={{ width: `${(t.amount / (topTreatments[0].amount || 1)) * 100}%` }}></div></div></div></div>))}
+                    </div></div>
                 </div>
             );
         };
@@ -993,7 +1017,6 @@
             const addT = () => { if(!newTreat) return; setTreatments([...treatments, { id: DB.uuid(), name: newTreat }]); setNewTreat(''); };
             
             const handleDownloadBackup = () => {
-                // FIXED: Se envía correctamente el schedule desde los props
                 const data = { profile, clinics, treatments, logs, tariffs, invoices, schedule };
                 const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
@@ -1045,7 +1068,6 @@
             };
             
             const handleShareBackup = async () => {
-                // FIXED: Se envía correctamente el schedule desde los props
                 const data = { profile, clinics, treatments, logs, tariffs, invoices, schedule };
                 const jsonStr = JSON.stringify(data);
                 try {
@@ -1251,7 +1273,7 @@
             return (
                 <div className="min-h-screen pb-20">
                     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
-                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v10.4</span></div></div>
+                        <div className="flex items-center gap-2 text-purple-800"><Icon name="Activity" size={28} /><div><h1 className="text-xl font-bold leading-none">DeniDental</h1><span className="text-xs text-gray-400 font-medium tracking-wider">PRO v10.5</span></div></div>
                     </header>
                     <div className="p-4 md:p-8">
                         {view === 'register' && <RegisterView clinics={clinics} treatments={treatments} tariffs={tariffs} addLog={addLog} updateTariffMaster={updateTariffMaster} />}

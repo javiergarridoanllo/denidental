@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novedades de DeniDental</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
+<style>
+:root{--tinta:#1e293b;--suave:#64748b;--acento:#7e22ce;--linea:#e2e8f0;--fondo:#f8fafc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);
+ font:16px/1.65 -apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.hoja{max-width:1080px;margin:0 auto;padding:0 24px 80px}
+header.tapa{background:linear-gradient(135deg,#6b21a8,#2563eb);color:#fff;padding:64px 24px 56px;margin-bottom:48px}
+header.tapa .in{max-width:1080px;margin:0 auto}
+header.tapa .logo{font-size:44px;line-height:1}
+header.tapa h1{margin:14px 0 6px;font-size:clamp(28px,5vw,44px);letter-spacing:-.02em}
+header.tapa p{margin:0;opacity:.9;font-size:17px}
+header.tapa .ver{display:inline-block;margin-top:20px;background:rgba(255,255,255,.18);
+ border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:5px 14px;font-size:13px}
+h2.cap{margin:64px 0 8px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--acento);font-weight:700}
+h2.cap:first-of-type{margin-top:0}
+.paso{background:#fff;border:1px solid var(--linea);border-radius:16px;padding:28px;margin:18px 0 28px;
+ box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.paso h3{margin:0 0 14px;font-size:21px;letter-spacing:-.01em;display:flex;gap:12px;align-items:baseline}
+.paso h3 .n{flex:0 0 auto;background:var(--acento);color:#fff;border-radius:8px;font-size:13px;
+ padding:3px 9px;font-weight:700}
+.cuerpo{display:grid;grid-template-columns:1fr 300px;gap:32px;align-items:start}
+@media(max-width:820px){.cuerpo{grid-template-columns:1fr}}
+.texto p{margin:0 0 12px}.texto ul{margin:0 0 12px;padding-left:20px}.texto li{margin:4px 0}
+.texto code{background:#f1f5f9;border-radius:4px;padding:1px 5px;font-size:.88em}
+blockquote{margin:16px 0 12px;padding:12px 16px;background:#fffbeb;border-left:3px solid #f59e0b;
+ border-radius:0 8px 8px 0;color:#92400e;font-size:15px}
+.captura img{width:100%;height:auto;display:block}
+.indice{background:#fff;border:1px solid var(--linea);border-radius:16px;padding:24px 28px;margin-bottom:8px}
+.indice h2{margin:0 0 14px;font-size:15px;text-transform:uppercase;letter-spacing:.1em;color:var(--suave)}
+.indice ol{margin:0;padding-left:22px;columns:2;column-gap:36px}
+@media(max-width:700px){.indice ol{columns:1}}
+.indice li{margin:5px 0}.indice a{color:var(--tinta);text-decoration:none}
+.indice a:hover{color:var(--acento);text-decoration:underline}
+.intro{background:#fff;border:1px solid var(--linea);border-left:4px solid var(--acento);
+ border-radius:12px;padding:24px 28px;margin-bottom:36px}
+.intro p{margin:0 0 10px}.intro p:last-child{margin:0}
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--linea);color:var(--suave);font-size:13px}
+.et{display:inline-block;border-radius:6px;font-size:11px;font-weight:700;padding:2px 8px;
+ text-transform:uppercase;letter-spacing:.04em;margin-right:10px;vertical-align:2px}
+.et.nuevo{background:#dcfce7;color:#15803d}.et.arreglo{background:#dbeafe;color:#1d4ed8}
+.nov{background:#fff;border:1px solid var(--linea);border-radius:16px;padding:28px;margin-bottom:24px}
+.nov h3{margin:0 0 4px;font-size:24px}
+.nov .fecha{color:var(--suave);font-size:14px;margin-bottom:20px}
+.nov ul{list-style:none;margin:0;padding:0}
+.nov li{padding:12px 0;border-top:1px solid #f1f5f9}
+.nov li:first-child{border-top:0}
+.nov li b{display:inline}
+.nov li .desc{display:block;color:var(--suave);font-size:15px;margin-top:3px}
+</style></head><body>
+<header class="tapa"><div class="in">
+  <div class="logo">✨</div>
+  <h1>Novedades de DeniDental</h1>
+  <p>Qué ha cambiado en cada versión</p>
+</div></header>
+<div class="hoja">
+<article class="nov">
+  <h3>Versión 10.9.5 · Informes más simples</h3>
+  <div class="fecha">29/08/2026</div>
+  <ul><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>Fuera el resumen fiscal de Informes</b><span class="desc">La tarjeta con la base imponible, las retenciones y el total percibido se ha quitado: repetía lo que ya se ve en las cuatro cifras y en el detalle por clínica. Esos números, para la declaración, van en la portada del PDF que se manda a la gestoría.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>Fuera la exportación a CSV</b><span class="desc">Los botones de «Facturas CSV» y «Tratamientos CSV» ya no estaban en uso y se han quitado, junto con el código que los soportaba.</span></li></ul>
+</article>
+<article class="nov">
+  <h3>Versión 10.9.4 · Retoques de uso</h3>
+  <div class="fecha">29/08/2026</div>
+  <ul><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Buscador de tratamientos</b><span class="desc">Un solo campo que busca en todo: nombre del tratamiento, clínica, importes, laboratorio, notas y fecha. Escribe dos palabras y afina más.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>El paquete para la gestoría, en Facturas</b><span class="desc">El PDF único con todas las facturas del trimestre o del año se ha movido de Informes a Facturas, que es donde se busca. En Informes queda el resumen de lo facturado.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>Ya se puede guardar al modificar un tratamiento</b><span class="desc">La barra de abajo se pintaba encima de la ficha y tapaba el botón de guardar. Además ahora el botón se queda siempre a la vista.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>El botón de anular se salía de la tarjeta</b><span class="desc">En pantallas estrechas los botones de la factura se desbordaban. Ahora van de dos en dos y bajan de línea.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>Los filtros de tratamientos</b><span class="desc">Había un filtro «Activos» que era casi lo mismo que «Todos». Se ha quitado: por defecto se ven todos, y Pendientes y Anulados quedan aparte.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>El importe de las retenciones partía de línea</b><span class="desc">En el resumen fiscal el símbolo del euro se caía a la línea de abajo.</span></li></ul>
+</article>
+<article class="nov">
+  <h3>Versión 10.9.3 · Laboratorio, pendientes y numeración</h3>
+  <div class="fecha">28/08/2026</div>
+  <ul><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Gastos de laboratorio</b><span class="desc">Se anotan dentro del tratamiento: metes el coste total y la app calcula tu parte con el porcentaje de la clínica. Salen desglosados en la factura y en el anexo, y el IRPF se aplica sobre la base ya neta.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Tratamientos pendientes de validar</b><span class="desc">Para lo que no está claro que la clínica vaya a pagar. No entran en la factura salvo que los incluyas, se puede sacar un informe con los motivos para negociar, y se les puede hacer una factura aparte.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Anular tratamientos</b><span class="desc">Quedan registrados pero no se facturan nunca, y se esconden del listado.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Control de cobros</b><span class="desc">Tarjeta de pendiente de cobro y listado de facturas impagadas con su antigüedad y un semáforo.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Informe trimestral</b><span class="desc">Base imponible, laboratorio y retenciones del trimestre, con los números del modelo 130.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Un PDF con todas las facturas del trimestre</b><span class="desc">Portada con el resumen y una página por factura. Un solo archivo para la gestoría.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Exportar a Excel</b><span class="desc">Facturas y tratamientos en CSV, listos para abrir en Excel.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Tarifas e histórico de precios</b><span class="desc">Pantalla con lo último usado en cada clínica y el historial de cambios, que antes se guardaba y no se podía ver.</span></li><li>
+      <span class="et nuevo">Nuevo</span>
+      <b>Funciona sin internet</b><span class="desc">La aplicación ya lleva dentro todo lo que necesita. Antes se descargaba de la red en cada arranque y sin cobertura no abría.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>La numeración ya no se repite</b><span class="desc">Al borrar una factura, su número se volvía a repartir y podían circular dos facturas distintas con el mismo número. Ahora el contador solo sube y las facturas se anulan en vez de borrarse.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>Días con dos turnos en la misma clínica</b><span class="desc">Mañana y tarde el mismo día contaban medio día en lugar de uno, y eso hacía facturar de menos.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>Segunda factura del mismo mes</b><span class="desc">Volvía a contar todos los días de la agenda, así que se facturaban dos veces.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>El IRPF de las facturas antiguas</b><span class="desc">Se leía del perfil al imprimir, así que al cambiar de tramo cambiaban todas las facturas ya emitidas. Ahora cada factura guarda el suyo.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>La factura se pisaba a sí misma</b><span class="desc">El texto de la exención de IVA se solapaba con las retenciones. Y el total ahora va siempre en el mismo sitio, abajo.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>Avisos de NIF, CIF e IBAN</b><span class="desc">Si la letra de control o los dígitos no cuadran, te lo dice. No bloquea nada.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>El logo ya no desaparece</b><span class="desc">Si la imagen no se podía procesar se guardaba una referencia temporal y el logo se perdía al recargar. Y un PNG con fondo transparente salía con fondo negro.</span></li><li>
+      <span class="et arreglo">Arreglado</span>
+      <b>Ya se puede hacer zoom en el móvil</b></li></ul>
+</article>
+  <footer>Para saber cómo se usa cada cosa, mira el manual.</footer>
+</div></body></html>
